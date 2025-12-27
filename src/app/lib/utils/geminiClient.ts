@@ -1,125 +1,134 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GeminiRequest, GeminiResponse } from '../../lib/types/workflow';
 
-
 export class GeminiClient {
   private genAI: GoogleGenerativeAI;
-  private apiKey: string;
 
   constructor() {
-    this.apiKey = process.env.GOOGLE_GEMINI_API_KEY || '';
-    if (!this.apiKey) {
-      console.warn('Gemini API key not found in environment variables');
+    const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GOOGLE_GEMINI_API_KEY is not configured');
     }
-    this.genAI = new GoogleGenerativeAI(this.apiKey);
+    this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
-  async generateContent(request: GeminiRequest): Promise<GeminiResponse> {
+  // Process images with Gemini Vision
+  async analyzeWithVision(request: GeminiRequest): Promise<GeminiResponse> {
     try {
-      if (!this.apiKey) {
-        throw new Error('Gemini API key not configured');
-      }
-
       const model = this.genAI.getGenerativeModel({ 
         model: request.model || 'gemini-2.5-flash',
         systemInstruction: request.systemPrompt,
       });
 
-      // Build prompt parts
-      const promptParts: any[] = [{ text: request.userMessage }];
-
+      // Build multimodal prompt
+      const promptParts: any[] = [];
+      
+      // Add text prompt
+      promptParts.push({ text: request.userMessage });
+      
       // Add images if provided
       if (request.images && request.images.length > 0) {
-        request.images.forEach((imageBase64) => {
-          // Extract base64 data and mime type
-          const matches = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-          if (matches) {
-            const mimeType = matches[1];
-            const base64Data = matches[2];
-            
+        for (const imageBase64 of request.images) {
+          const imageData = this.parseBase64Image(imageBase64);
+          if (imageData) {
             promptParts.push({
               inlineData: {
-                data: base64Data,
-                mimeType: mimeType || 'image/jpeg',
+                data: imageData.data,
+                mimeType: imageData.mimeType,
               },
             });
           }
-        });
+        }
       }
 
-      // Generate content
       const result = await model.generateContent(promptParts);
       const response = await result.response;
       const text = response.text();
 
-      return { text };
+      return { 
+        text
+      };
       
     } catch (error: any) {
-      console.error('Gemini API Error:', error);
+      console.error('Gemini Vision API Error:', error);
       
-      // Handle specific error types
-      let errorMessage = 'Failed to generate content';
+      let errorMessage = 'Failed to analyze content';
       
       if (error.message?.includes('API key')) {
-        errorMessage = 'Invalid API key. Please check your configuration.';
+        errorMessage = 'Invalid API key';
       } else if (error.message?.includes('quota')) {
-        errorMessage = 'API quota exceeded. Please try again later.';
+        errorMessage = 'API quota exceeded';
       } else if (error.message?.includes('safety')) {
-        errorMessage = 'Content blocked by safety filters.';
-      } else if (error.message?.includes('model')) {
-        errorMessage = 'Invalid model specified.';
+        errorMessage = 'Content blocked by safety filters';
       }
       
       return { text: '', error: errorMessage };
     }
   }
 
-  // Get available models
-  getAvailableModels() {
+  // Parse base64 image data
+  private parseBase64Image(base64String: string): { data: string; mimeType: string } | null {
+    const matches = base64String.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      console.warn('Invalid image format:', base64String.substring(0, 50));
+      return null;
+    }
+    
+    return {
+      mimeType: matches[1],
+      data: matches[2],
+    };
+  }
+
+  // Get vision-capable models
+  getVisionModels() {
     return [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast, versatile model' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most capable model' },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Balanced performance' },
-      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash Experimental', description: 'Latest features' },
-      { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Lightweight, efficient' },
+      { 
+        id: 'gemini-2.5-flash', 
+        name: 'Gemini 2.5 Flash', 
+        supportsVision: true,
+        maxImages: 16,
+        description: 'Fast vision model for image analysis'
+      },
+      { 
+        id: 'gemini-2.5-pro', 
+        name: 'Gemini 2.5 Pro', 
+        supportsVision: true,
+        maxImages: 16,
+        description: 'High accuracy vision model'
+      },
     ];
   }
 
-  // Check if API key is configured
-  isConfigured(): boolean {
-    return !!this.apiKey && this.apiKey.length > 0;
-  }
-
-  // Validate image for Gemini API
-  validateImage(base64Image: string): { valid: boolean; error?: string } {
-    try {
-      const matches = base64Image.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (!matches) {
-        return { valid: false, error: 'Invalid image format. Must be base64 data URL.' };
-      }
-
-      const mimeType = matches[1];
-      const base64Data = matches[2];
-      
-      // Check if it's a supported image type
-      const supportedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
-      if (!supportedTypes.includes(mimeType)) {
-        return { valid: false, error: `Unsupported image type: ${mimeType}. Supported: JPEG, PNG, WebP, HEIC.` };
-      }
-
-      // Check size (Gemini has limits)
-      const sizeInBytes = (base64Data.length * 3) / 4;
-      const maxSize = 20 * 1024 * 1024; // 20MB
-      if (sizeInBytes > maxSize) {
-        return { valid: false, error: 'Image too large. Maximum size is 20MB.' };
-      }
-
-      return { valid: true };
-    } catch (error) {
-      return { valid: false, error: 'Failed to validate image.' };
+  // Validate image for Gemini Vision
+  validateImageForVision(imageBase64: string): { valid: boolean; error?: string } {
+    const parsed = this.parseBase64Image(imageBase64);
+    if (!parsed) {
+      return { valid: false, error: 'Invalid image format. Must be base64 data URL.' };
     }
+
+    // Check supported MIME types
+    const supportedTypes = [
+      'image/jpeg', 'image/png', 'image/webp', 
+      'image/heic', 'image/heif', 'image/bmp', 'image/gif'
+    ];
+    
+    if (!supportedTypes.includes(parsed.mimeType)) {
+      return { 
+        valid: false, 
+        error: `Unsupported image type: ${parsed.mimeType}` 
+      };
+    }
+
+    // Check size (approx 20MB limit)
+    const sizeInBytes = (parsed.data.length * 3) / 4;
+    const maxSize = 20 * 1024 * 1024;
+    if (sizeInBytes > maxSize) {
+      return { valid: false, error: 'Image too large (max 20MB)' };
+    }
+
+    return { valid: true };
   }
 }
 
-// Singleton instance
 export const geminiClient = new GeminiClient();
