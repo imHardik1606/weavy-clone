@@ -56,6 +56,54 @@ body {
   cursor: grab;
 }
 
+/* Fix React Flow handle styling */
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  border: 2px solid white !important;
+  background: #8B5CF6 !important; /* Purple default */
+}
+
+/* Specific handle colors */
+.react-flow__handle.source {
+  background: #10B981 !important; /* Green for outputs */
+}
+
+.react-flow__handle.target[data-handleid="user_message"] {
+  background: #3B82F6 !important; /* Blue for user_message */
+}
+
+.react-flow__handle.target[data-handleid="system_prompt"] {
+  background: #8B5CF6 !important; /* Purple for system_prompt */
+}
+
+.react-flow__handle.target[data-handleid="images"] {
+  background: #10B981 !important; /* Green for images */
+}
+
+/* Make handles more visible */
+.react-flow__handle:hover {
+  transform: scale(1.2);
+  transition: transform 0.2s;
+}
+
+/* Connection line styling */
+.react-flow__edge-path {
+  stroke: #8B5CF6 !important;
+  stroke-width: 3 !important;
+}
+
+.react-flow__edge.animated path {
+  stroke-dasharray: 8;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 16;
+  }
+}
+
 .react-flow__node:active {
   cursor: grabbing;
 }
