@@ -226,7 +226,7 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
   };
   
   return (
-    <div className="px-4 py-3 shadow-lg rounded-xl bg-white border border-gray-200 w-[380px]">
+    <div className="px-4 py-3 shadow-lg rounded-xl bg-white border border-gray-200 w-95">
       {/* Input Handles */}
       <Handle
         type="target"
@@ -267,7 +267,7 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
           isLoading={isRunning}
           size="sm"
           variant={canRun ? "default" : "secondary"}
-          className="min-w-[80px]"
+          className="min-w-20"
           title={!canRun ? "Connect a Text Node to run" : "Run LLM"}
         >
           {isRunning ? 'Running...' : 'Run'}
@@ -308,7 +308,7 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
       </div>
       
       {/* Content Area - SCROLLABLE CONTAINER */}
-      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-125 overflow-y-auto pr-1">
         {/* Model Selection */}
         <div>
           <label className="text-xs font-medium text-gray-700 mb-1 block">
@@ -345,7 +345,7 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
               value={data.systemPrompt || ''}
               onChange={(e) => updateNode(id, { systemPrompt: e.target.value })}
               placeholder="You are a helpful assistant..."
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 min-h-[60px] resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 min-h-15 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               rows={2}
               onWheel={(e) => e.stopPropagation()}
             />
