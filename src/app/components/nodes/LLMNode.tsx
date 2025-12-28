@@ -1,10 +1,12 @@
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Play, AlertCircle, CheckCircle, Image as ImageIcon, Link, Unlink, Copy, ChevronUp } from 'lucide-react';
+import { Play, AlertCircle, CheckCircle, Image as ImageIcon, Link, Copy, ChevronUp, Brain } from 'lucide-react';
 import { WorkflowNodeData } from '../../lib/types/workflow';
 import { useWorkflowStore } from '../../lib/store/useWorkflowStore';
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '../../components/ui/Button';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { NodeMenu } from '../../components/ui/NodeMenu';
+import { cn } from '../../lib/utils/cn';
 
 // Correct Gemini models for text generation + vision
 const MODELS = [
@@ -34,8 +36,10 @@ const MODELS = [
   },
 ];
 
-export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
+export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
   const updateNode = useWorkflowStore((state) => state.updateNode);
+  const deleteNode = useWorkflowStore((state) => state.deleteNode);
+  const setSelectedNode = useWorkflowStore((state) => state.setSelectedNode);
   const edges = useWorkflowStore((state) => state.edges);
   const nodes = useWorkflowStore((state) => state.nodes);
   const [isRunning, setIsRunning] = useState(false);
@@ -48,6 +52,26 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
   
   const outputRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const handleDelete = () => {
+    deleteNode(id);
+  };
+  
+  const handleDuplicate = () => {
+    const node = useWorkflowStore.getState().nodes.find(n => n.id === id);
+    if (node) {
+      const addNode = useWorkflowStore.getState().addNode;
+      const newNodeId = addNode(node.type as string, {
+        x: node.position.x + 50,
+        y: node.position.y + 50
+      });
+      useWorkflowStore.getState().updateNode(newNodeId, { ...node.data });
+    }
+  };
+  
+  const handleConfigure = () => {
+    console.log('Configure node:', id);
+  };
   
   // Check connections whenever edges change
   useEffect(() => {
@@ -226,38 +250,98 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
   };
   
   return (
-    <div className="px-4 py-3 shadow-lg rounded-xl bg-white border border-gray-200 w-95">
+    <div 
+      className={cn(
+        "px-4 py-3 shadow-lg rounded-xl bg-white min-w-70 relative group transition-all duration-150",
+        selected 
+          ? "border-2 border-purple-500 shadow-purple-100" 
+          : "border border-gray-200 hover:border-gray-300"
+      )}
+      onClick={(e) => {
+        if (!(e.target as HTMLElement).closest('.node-menu')) {
+          setSelectedNode(id);
+        }
+      }}
+    >
+      {/* Node Menu */}
+      <div className="node-menu">
+        <NodeMenu
+          nodeId={id}
+          nodeType="llm"
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+          onConfigure={handleConfigure}
+          position="top-right"
+        />
+      </div>
+      
+      {/* Selection indicator */}
+      {selected && (
+        <div className="absolute -top-2 -right-2 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center z-10">
+          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+        </div>
+      )}
+      
       {/* Input Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-purple-500 border-2 border-white"
+        className={cn(
+          "w-3 h-3 border-2! transition-all",
+          selected ? "border-white! scale-110" : "border-white!"
+        )}
+        style={{ 
+          backgroundColor: selected ? '#8B5CF6' : '#8B5CF6',
+          top: '30%' 
+        }}
         id="system_prompt"
-        style={{ top: '30%' }}
       />
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
-        style={{ top: '50%' }}
+        className={cn(
+          "w-3 h-3 border-2! transition-all",
+          selected ? "border-white! scale-110" : "border-white!"
+        )}
+        style={{ 
+          backgroundColor: selected ? '#3B82F6' : '#3B82F6',
+          top: '50%' 
+        }}
         id="user_message"
       />
       <Handle
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-green-500 border-2 border-white"
-        style={{ top: '70%' }}
+        className={cn(
+          "w-3 h-3 border-2! transition-all",
+          selected ? "border-white! scale-110" : "border-white!"
+        )}
+        style={{ 
+          backgroundColor: selected ? '#10B981' : '#10B981',
+          top: '70%' 
+        }}
         id="images"
       />
       
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center">
-          <div className="w-5 h-5 rounded-md bg-purple-100 flex items-center justify-center mr-2">
-            <span className="text-purple-600 text-xs font-bold">AI</span>
+          <div className={cn(
+            "w-5 h-5 rounded-md flex items-center justify-center mr-2",
+            selected ? "bg-purple-100" : "bg-purple-50"
+          )}>
+            <span className={cn(
+              "text-xs font-bold",
+              selected ? "text-purple-600" : "text-purple-500"
+            )}>
+              <Brain size={12} />
+            </span>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-800">Run Any LLM</h3>
+            <h3 className={cn(
+              "text-sm font-semibold",
+              selected ? "text-purple-700" : "text-gray-800"
+            )}>Run Any LLM</h3>
             <p className="text-xs text-gray-500">Text generation + vision analysis</p>
           </div>
         </div>
@@ -267,7 +351,10 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
           isLoading={isRunning}
           size="sm"
           variant={canRun ? "default" : "secondary"}
-          className="min-w-20"
+          className={cn(
+            "min-w-20",
+            selected && "bg-purple-600 hover:bg-purple-700"
+          )}
           title={!canRun ? "Connect a Text Node to run" : "Run LLM"}
         >
           {isRunning ? 'Running...' : 'Run'}
@@ -275,23 +362,59 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
       </div>
       
       {/* Connection Status */}
-      <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+      <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
         <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className={`flex flex-col items-center p-1 rounded ${connectionStatus.hasUserMessage ? 'bg-blue-50' : 'bg-gray-100'}`}>
-            <div className={`w-2 h-2 rounded-full mb-1 ${connectionStatus.hasUserMessage ? 'bg-blue-500' : 'bg-gray-400'}`} />
-            <span className={connectionStatus.hasUserMessage ? 'text-blue-700 font-medium' : 'text-gray-500'}>
+          <div className={cn(
+            "flex flex-col items-center p-1 rounded",
+            connectionStatus.hasUserMessage 
+              ? 'bg-blue-50 border border-blue-100' 
+              : 'bg-gray-100'
+          )}>
+            <div className={cn(
+              "w-2 h-2 rounded-full mb-1",
+              connectionStatus.hasUserMessage ? 'bg-blue-500' : 'bg-gray-400'
+            )} />
+            <span className={cn(
+              connectionStatus.hasUserMessage 
+                ? 'text-blue-700 font-medium' 
+                : 'text-gray-500'
+            )}>
               {connectionStatus.hasUserMessage ? '✓ Text' : 'No Text'}
             </span>
           </div>
-          <div className={`flex flex-col items-center p-1 rounded ${connectionStatus.hasSystemPrompt ? 'bg-purple-50' : 'bg-gray-100'}`}>
-            <div className={`w-2 h-2 rounded-full mb-1 ${connectionStatus.hasSystemPrompt ? 'bg-purple-500' : 'bg-gray-400'}`} />
-            <span className={connectionStatus.hasSystemPrompt ? 'text-purple-700 font-medium' : 'text-gray-500'}>
+          <div className={cn(
+            "flex flex-col items-center p-1 rounded",
+            connectionStatus.hasSystemPrompt 
+              ? 'bg-purple-50 border border-purple-100' 
+              : 'bg-gray-100'
+          )}>
+            <div className={cn(
+              "w-2 h-2 rounded-full mb-1",
+              connectionStatus.hasSystemPrompt ? 'bg-purple-500' : 'bg-gray-400'
+            )} />
+            <span className={cn(
+              connectionStatus.hasSystemPrompt 
+                ? 'text-purple-700 font-medium' 
+                : 'text-gray-500'
+            )}>
               {connectionStatus.hasSystemPrompt ? '✓ System' : 'System'}
             </span>
           </div>
-          <div className={`flex flex-col items-center p-1 rounded ${connectionStatus.hasImages ? 'bg-green-50' : 'bg-gray-100'}`}>
-            <div className={`w-2 h-2 rounded-full mb-1 ${connectionStatus.hasImages ? 'bg-green-500' : 'bg-gray-400'}`} />
-            <span className={connectionStatus.hasImages ? 'text-green-700 font-medium' : 'text-gray-500'}>
+          <div className={cn(
+            "flex flex-col items-center p-1 rounded",
+            connectionStatus.hasImages 
+              ? 'bg-green-50 border border-green-100' 
+              : 'bg-gray-100'
+          )}>
+            <div className={cn(
+              "w-2 h-2 rounded-full mb-1",
+              connectionStatus.hasImages ? 'bg-green-500' : 'bg-gray-400'
+            )} />
+            <span className={cn(
+              connectionStatus.hasImages 
+                ? 'text-green-700 font-medium' 
+                : 'text-gray-500'
+            )}>
               {connectionStatus.hasImages ? '✓ Images' : 'No Images'}
             </span>
           </div>
@@ -308,7 +431,7 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
       </div>
       
       {/* Content Area - SCROLLABLE CONTAINER */}
-      <div className="space-y-3 max-h-125 overflow-y-auto pr-1">
+      <div className="space-y-3 max-h-100 overflow-y-auto pr-1 scrollbar-thin">
         {/* Model Selection */}
         <div>
           <label className="text-xs font-medium text-gray-700 mb-1 block">
@@ -320,7 +443,10 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
               setSelectedModel(e.target.value);
               updateNode(id, { model: e.target.value });
             }}
-            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className={cn(
+              "w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+              selected ? "border-purple-300" : "border-gray-300"
+            )}
           >
             {MODELS.map((model) => (
               <option key={model.id} value={model.id}>
@@ -345,7 +471,10 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
               value={data.systemPrompt || ''}
               onChange={(e) => updateNode(id, { systemPrompt: e.target.value })}
               placeholder="You are a helpful assistant..."
-              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 min-h-15 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className={cn(
+                "w-full text-sm border rounded-lg px-3 py-2 min-h-15 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                selected ? "border-purple-300" : "border-gray-300"
+              )}
               rows={2}
               onWheel={(e) => e.stopPropagation()}
             />
@@ -458,26 +587,48 @@ export default function LLMNode({ id, data }: NodeProps<WorkflowNodeData>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="w-3 h-3 bg-green-600 border-2 border-white"
+        className={cn(
+          "w-3 h-3 border-2! transition-all",
+          selected ? "border-white! scale-110" : "border-white!"
+        )}
+        style={{ 
+          backgroundColor: selected ? '#10B981' : '#10B981',
+          top: '50%' 
+        }}
         id="output"
-        style={{ top: '50%' }}
       />
       
       {/* Node Footer */}
-      <div className="text-xs text-gray-500 mt-2 flex justify-between items-center">
-        <div className="flex items-center">
+      <div className="flex items-center justify-between mt-2">
+        <div className="text-xs text-gray-500 flex items-center">
           <div className={`w-2 h-2 rounded-full mr-1 ${canRun ? 'bg-green-500' : 'bg-gray-400'}`} />
           <span>{canRun ? 'Ready to run' : 'Connect text input'}</span>
         </div>
-        <div className="text-xs flex items-center">
+        <div className="flex items-center gap-2">
+          {selected && (
+            <div className="text-xs text-gray-400 flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs border border-gray-300">Del</kbd>
+              <span>to delete</span>
+            </div>
+          )}
           {connectionStatus.hasImages && (
-            <span className="text-green-600 flex items-center">
+            <span className="text-xs text-green-600 flex items-center">
               <ImageIcon size={12} className="mr-1" />
               Vision
             </span>
           )}
         </div>
       </div>
+      
+      {/* Delete button for touch devices */}
+      {selected && (
+        <button
+          onClick={handleDelete}
+          className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-xs rounded-lg shadow-lg hover:bg-red-600 transition-colors z-10"
+        >
+          Delete Node
+        </button>
+      )}
     </div>
   );
 }

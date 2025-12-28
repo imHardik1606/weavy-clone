@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge, Connection, addEdge, applyNodeChanges, applyEdgeChanges } from 'reactflow';
-import { WorkflowNodeData, Workflow } from '../types/workflow';
+import { WorkflowNodeData, Workflow } from '../../lib/types/workflow';
 import { nanoid } from 'nanoid';
 
 interface WorkflowState {
@@ -14,6 +14,7 @@ interface WorkflowState {
   addNode: (type: string, position: { x: number; y: number }) => string;
   updateNode: (id: string, data: Partial<WorkflowNodeData>) => void;
   deleteNode: (id: string) => void;
+  deleteSelectedNode: () => void;
   setSelectedNode: (id: string | null) => void;
   
   // Edge operations
@@ -31,6 +32,9 @@ interface WorkflowState {
   // Undo/Redo
   undo: () => void;
   redo: () => void;
+  
+  // Keyboard shortcuts
+  handleKeyDown: (e: KeyboardEvent) => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>((set, get) => ({
@@ -55,7 +59,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       data: nodeDefaults[type as keyof typeof nodeDefaults],
     };
     
-    set((state) => ({ nodes: [...state.nodes, newNode] }));
+    set((state) => ({ 
+      nodes: [...state.nodes, newNode],
+      selectedNode: id // Auto-select new node
+    }));
     return id;
   },
   
@@ -73,8 +80,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       edges: state.edges.filter(
         (edge) => edge.source !== id && edge.target !== id
       ),
+      selectedNode: state.selectedNode === id ? null : state.selectedNode,
     }));
   },
+  
+  deleteSelectedNode: () => {
+    const { selectedNode } = get();
+    if (selectedNode) {
+      get().deleteNode(selectedNode);
+    }
+  },
+  
+  setSelectedNode: (id) => set({ selectedNode: id }),
   
   onConnect: (connection) => {
     set((state) => ({
@@ -98,10 +115,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   onNodesChange: (changes) => {
     set((state) => ({
       nodes: applyNodeChanges(changes, state.nodes),
+      // Update selected node based on changes
+      selectedNode: changes.reduce((selected: string | null, change: any) => {
+        if (change.type === 'select' && change.selected) {
+          return change.id;
+        }
+        if (change.type === 'select' && !change.selected && change.id === selected) {
+          return null;
+        }
+        return selected;
+      }, state.selectedNode),
     }));
   },
-  
-  setSelectedNode: (id) => set({ selectedNode: id }),
   
   saveWorkflow: (name) => {
     const id = nanoid();
@@ -119,9 +144,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
       currentWorkflowId: id,
     }));
     
-    // In production: Save to database
     localStorage.setItem(`workflow_${id}`, JSON.stringify(workflow));
-    
     return id;
   },
   
@@ -133,6 +156,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         nodes: workflow.nodes,
         edges: workflow.edges,
         currentWorkflowId: id,
+        selectedNode: null,
       });
     }
   },
@@ -163,6 +187,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         nodes: data.nodes || [],
         edges: data.edges || [],
         currentWorkflowId: null,
+        selectedNode: null,
       });
     } catch (error) {
       console.error('Failed to import workflow:', error);
@@ -170,12 +195,56 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
   
   undo: () => {
-    // Implementation for undo functionality
     console.log('Undo not implemented yet');
   },
   
   redo: () => {
-    // Implementation for redo functionality
     console.log('Redo not implemented yet');
+  },
+  
+  handleKeyDown: (e: KeyboardEvent) => {
+    const { selectedNode, deleteNode } = get();
+    
+    // Delete/Backspace: Delete selected node
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNode) {
+      e.preventDefault();
+      deleteNode(selectedNode);
+      return;
+    }
+    
+    // Escape: Deselect node
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      set({ selectedNode: null });
+      return;
+    }
+    
+    // Ctrl/Cmd + Z: Undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      get().undo();
+      return;
+    }
+    
+    // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y: Redo
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'Z' || e.key === 'y')) {
+      e.preventDefault();
+      get().redo();
+      return;
+    }
+    
+    // Ctrl/Cmd + D: Duplicate selected node
+    if ((e.ctrlKey || e.metaKey) && e.key === 'd' && selectedNode) {
+      e.preventDefault();
+      const node = get().nodes.find(n => n.id === selectedNode);
+      if (node) {
+        const newNodeId = get().addNode(node.type as string, {
+          x: node.position.x + 50,
+          y: node.position.y + 50
+        });
+        get().updateNode(newNodeId, { ...node.data });
+      }
+      return;
+    }
   },
 }));
