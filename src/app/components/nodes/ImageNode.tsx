@@ -4,7 +4,7 @@ import { cn } from "../../lib/utils/cn";
 import { NodeMenu } from "../../components/ui/NodeMenu";
 import { WorkflowNodeData } from "../../lib/types/workflow";
 import { useWorkflowStore } from "../../lib/store/useWorkflowStore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
   const updateNode = useWorkflowStore((state) => state.updateNode);
@@ -12,6 +12,10 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
   const setSelectedNode = useWorkflowStore((state) => state.setSelectedNode);
   const [dragOver, setDragOver] = useState(false);
   const [imageDimensions, setImageDimensions] = useState<{width: number, height: number} | null>(null);
+  
+  // Use refs for file input
+  const inputRef = useRef<HTMLInputElement>(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
 
   const handleDelete = () => {
     deleteNode(id);
@@ -49,6 +53,75 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
     reader.readAsDataURL(file);
   };
 
+  // DIRECT FILE INPUT TRIGGER - Most reliable approach
+  const triggerFileInput = () => {
+    // First select the node
+    setSelectedNode(id);
+    
+    // Create and trigger a file input programmatically
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    
+    input.onchange = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (file && file.type.startsWith("image/")) {
+        handleFileUpload(file);
+      }
+      // Clean up
+      document.body.removeChild(input);
+    };
+    
+    // Add to body and trigger click
+    document.body.appendChild(input);
+    input.click();
+  };
+
+  // Handle drop event - MUST stop all propagation
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      handleFileUpload(file);
+    }
+  };
+
+  // Handle drag over - MUST stop all propagation
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+
+  // Handle drag leave
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+
+  // Handle click on upload area - NEW APPROACH
+  const handleUploadAreaClick = (e: React.MouseEvent) => {
+    // IMPORTANT: Use setTimeout to bypass React Flow event handling
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Store current target
+    const target = e.currentTarget;
+    
+    // Use setTimeout to trigger after React Flow processes the event
+    setTimeout(() => {
+      triggerFileInput();
+    }, 0);
+    
+    return false;
+  };
+
   // Reset dimensions when image is cleared
   useEffect(() => {
     if (!data.image) {
@@ -58,6 +131,7 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
 
   return (
     <div 
+      ref={nodeRef}
       className={cn(
         "px-4 py-3 shadow-lg rounded-xl bg-white min-w-50 relative group transition-all duration-150",
         selected 
@@ -65,9 +139,24 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
           : "border border-gray-200 hover:border-gray-300"
       )}
       onClick={(e) => {
-        if (!(e.target as HTMLElement).closest('.node-menu')) {
+        // Only select if not clicking on interactive elements
+        const target = e.target as HTMLElement;
+        const isInteractive = 
+          target.closest('.node-menu') || 
+          target.closest('.upload-area') ||
+          target.closest('.remove-btn') ||
+          target.closest('.file-input-trigger');
+        
+        if (!isInteractive) {
           setSelectedNode(id);
         }
+      }}
+      // Prevent React Flow from handling drag events on this node
+      onDragStart={(e) => {
+        e.stopPropagation();
+      }}
+      onDragOver={(e) => {
+        e.stopPropagation();
       }}
     >
       {/* Node Menu */}
@@ -94,7 +183,7 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
         type="target"
         position={Position.Left}
         className={cn(
-          "w-3 h-3 border-2! transition-all",
+          "w-3 h-3 border-21 transition-all",
           selected ? "border-white! scale-110" : "border-white!"
         )}
         style={{ backgroundColor: selected ? '#EC4899' : '#8B5CF6' }}
@@ -125,8 +214,12 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
             className="w-full h-32 object-cover rounded-lg border border-gray-200"
           />
           <button
-            onClick={() => updateNode(id, { image: "" })}
-            className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              updateNode(id, { image: "" });
+            }}
+            className="remove-btn absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
             title="Remove image"
           >
             <X size={14} />
@@ -142,26 +235,23 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
       ) : (
         <div
           className={cn(
-            "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors mb-2",
+            "upload-area border-2 border-dashed rounded-lg p-4 text-center transition-colors mb-2",
             dragOver 
               ? "border-purple-500 bg-purple-50" 
               : "border-gray-300 hover:border-gray-400 hover:bg-gray-50",
             selected && "border-pink-300"
           )}
-          onDragOver={(e) => {
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={handleUploadAreaClick}
+          onMouseDown={(e) => {
+            e.stopPropagation();
             e.preventDefault();
-            setDragOver(true);
           }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith("image/")) {
-              handleFileUpload(file);
-            }
-          }}
-          onClick={() => document.getElementById(`file-upload-${id}`)?.click()}
+          // Add these to completely disable React Flow interactions
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ cursor: 'pointer' }}
         >
           <Upload className={cn(
             "w-8 h-8 mx-auto mb-2",
@@ -176,7 +266,10 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
           <p className="text-xs text-gray-500 mt-1">
             Supports JPG, PNG, WebP, GIF
           </p>
+          
+          {/* Hidden file input as backup */}
           <input
+            ref={inputRef}
             id={`file-upload-${id}`}
             type="file"
             accept="image/*"
@@ -184,7 +277,9 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) handleFileUpload(file);
+              e.target.value = ''; // Reset
             }}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}
@@ -232,6 +327,7 @@ export default function ImageNode({ id, data, selected }: NodeProps<WorkflowNode
         <button
           onClick={handleDelete}
           className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-xs rounded-lg shadow-lg hover:bg-red-600 transition-colors z-10"
+          onMouseDown={(e) => e.stopPropagation()}
         >
           Delete Node
         </button>
