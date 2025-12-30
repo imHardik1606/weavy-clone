@@ -1,40 +1,36 @@
 import { Handle, Position, NodeProps } from 'reactflow';
-import { Play, AlertCircle, CheckCircle, Image as ImageIcon, Link, Copy, ChevronUp, Brain } from 'lucide-react';
+import { 
+  Play, 
+  AlertCircle, 
+  CheckCircle, 
+  Image as ImageIcon, 
+  Link, 
+  Copy, 
+  ChevronUp, 
+  Brain, 
+  Zap, 
+  Sparkles, 
+  Cpu, 
+  Maximize2, 
+  Minimize2,
+  Settings,
+  Clock,
+  Layers,
+  Shield
+} from 'lucide-react';
 import { WorkflowNodeData } from '../../lib/types/workflow';
 import { useWorkflowStore } from '../../lib/store/useWorkflowStore';
-import { useState, useEffect, useRef } from 'react';
-import { Button } from '../../components/ui/Button';
-import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { NodeMenu } from '../../components/ui/NodeMenu';
 import { cn } from '../../lib/utils/cn';
 
-// Correct Gemini models for text generation + vision
-const MODELS = [
-  { 
-    id: 'gemini-2.5-flash', 
-    name: 'Gemini 2.5 Flash', 
-    description: 'Fast, versatile model with vision support',
-    supportsVision: true
-  },
-  { 
-    id: 'gemini-2.5-pro', 
-    name: 'Gemini 2.5 Pro', 
-    description: 'Most capable model with vision',
-    supportsVision: true
-  },
-  { 
-    id: 'gemini-2.0-flash', 
-    name: 'Gemini 2.0 Flash', 
-    description: 'Balanced performance with vision',
-    supportsVision: true
-  },
-  { 
-    id: 'gemini-2.5-flash-lite', 
-    name: 'Gemini 2.5 Flash Lite', 
-    description: 'Lightweight, efficient with vision',
-    supportsVision: true
-  },
-];
+const NODE_SIZES = {
+  small: { width: 380, padding: 'px-4 py-3', maxHeight: 'max-h-[350px]' },
+  medium: { width: 480, padding: 'px-5 py-4', maxHeight: 'max-h-[400px]' },
+  large: { width: 580, padding: 'px-6 py-5', maxHeight: 'max-h-[450px]' },
+} as const;
+
+type NodeSize = keyof typeof NODE_SIZES;
 
 export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeData>) {
   const updateNode = useWorkflowStore((state) => state.updateNode);
@@ -42,8 +38,12 @@ export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeDa
   const setSelectedNode = useWorkflowStore((state) => state.setSelectedNode);
   const edges = useWorkflowStore((state) => state.edges);
   const nodes = useWorkflowStore((state) => state.nodes);
+  
   const [isRunning, setIsRunning] = useState(false);
   const [selectedModel, setSelectedModel] = useState(data.model || 'gemini-2.5-flash');
+  const [nodeSize, setNodeSize] = useState<NodeSize>('medium');
+  const [isHoveringResize, setIsHoveringResize] = useState(false);
+  
   const [connectionStatus, setConnectionStatus] = useState({
     hasUserMessage: false,
     hasSystemPrompt: false,
@@ -51,11 +51,17 @@ export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeDa
   });
   
   const outputRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  const handleDelete = () => {
-    deleteNode(id);
-  };
+  // Initialize node size from data
+  useEffect(() => {
+    if (data.nodeSize && ['small', 'medium', 'large'].includes(data.nodeSize)) {
+      setNodeSize(data.nodeSize as NodeSize);
+    }
+  }, [data.nodeSize]);
+
+  const handleDelete = () => deleteNode(id);
   
   const handleDuplicate = () => {
     const node = useWorkflowStore.getState().nodes.find(n => n.id === id);
@@ -65,76 +71,94 @@ export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeDa
         x: node.position.x + 50,
         y: node.position.y + 50
       });
-      useWorkflowStore.getState().updateNode(newNodeId, { ...node.data });
+      useWorkflowStore.getState().updateNode(newNodeId, { 
+        ...node.data, 
+        nodeSize 
+      });
     }
   };
   
-  const handleConfigure = () => {
-    console.log('Configure node:', id);
-  };
-  
-  // Check connections whenever edges change
+  // Update node size in store when it changes
+  useEffect(() => {
+    if (data.nodeSize !== nodeSize) {
+      updateNode(id, { ...data, nodeSize });
+    }
+  }, [nodeSize, id, data, updateNode]);
+
+  // Check connections
   useEffect(() => {
     const connectedEdges = edges.filter(edge => edge.target === id);
-    
-    const hasUserMessage = connectedEdges.some(
-      edge => edge.targetHandle === 'user_message'
-    );
-    const hasSystemPrompt = connectedEdges.some(
-      edge => edge.targetHandle === 'system_prompt'
-    );
-    const hasImages = connectedEdges.some(
-      edge => edge.targetHandle === 'images'
-    );
-    
     setConnectionStatus({
-      hasUserMessage,
-      hasSystemPrompt,
-      hasImages,
+      hasUserMessage: connectedEdges.some(edge => edge.targetHandle === 'user_message'),
+      hasSystemPrompt: connectedEdges.some(edge => edge.targetHandle === 'system_prompt'),
+      hasImages: connectedEdges.some(edge => edge.targetHandle === 'images'),
     });
   }, [edges, id]);
-  
-  // Prevent scroll propagation to canvas
+
+  // Handle scroll events within the node
   useEffect(() => {
-    const handleScroll = (e: Event) => {
-      e.stopPropagation();
-    };
-    
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.addEventListener('wheel', handleScroll, { passive: false });
-      textarea.addEventListener('touchmove', handleScroll, { passive: false });
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle if we're over the scrollable content
+      const isAtTop = scrollContainer.scrollTop === 0;
+      const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 1;
       
-      return () => {
-        textarea.removeEventListener('wheel', handleScroll);
-        textarea.removeEventListener('touchmove', handleScroll);
-      };
-    }
+      // Prevent React Flow from zooming when we can scroll more
+      if (!(isAtTop && e.deltaY < 0) && !(isAtBottom && e.deltaY > 0)) {
+        e.stopPropagation();
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Store initial touch position
+      const touch = e.touches[0];
+      scrollContainer.setAttribute('data-touch-start', touch.clientY.toString());
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      // Only prevent if we have scrollable content
+      const isAtTop = scrollContainer.scrollTop === 0;
+      const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 1;
+      
+      const touch = e.touches[0];
+      const startY = parseFloat(scrollContainer.getAttribute('data-touch-start') || '0');
+      const deltaY = touch.clientY - startY;
+      
+      // Only prevent if we're scrolling inside the container
+      if (!(isAtTop && deltaY > 0) && !(isAtBottom && deltaY < 0)) {
+        e.stopPropagation();
+      }
+    };
+
+    scrollContainer.addEventListener('wheel', handleWheel, { passive: false });
+    scrollContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+    scrollContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      scrollContainer.removeEventListener('wheel', handleWheel);
+      scrollContainer.removeEventListener('touchstart', handleTouchStart);
+      scrollContainer.removeEventListener('touchmove', handleTouchMove);
+    };
   }, []);
-  
-  // Check if we can run the LLM
-  const canRun = connectionStatus.hasUserMessage;
-  
-  // Get text from connected text node
+
+  // Handle resize
+  const handleResizeClick = (size: NodeSize) => {
+    setNodeSize(size);
+  };
+
+  // Node functions
   const getConnectedText = () => {
-    if (!connectionStatus.hasUserMessage) return '';
-    
-    const userMessageEdge = edges.find(
-      edge => edge.target === id && edge.targetHandle === 'user_message'
-    );
-    
+    const userMessageEdge = edges.find(edge => edge.target === id && edge.targetHandle === 'user_message');
     if (!userMessageEdge) return '';
-    
     const textNode = nodes.find(node => node.id === userMessageEdge.source);
     return textNode?.data.value || '';
   };
-  
-  // Get system prompt from connected node or local
+
   const getSystemPrompt = () => {
     if (connectionStatus.hasSystemPrompt) {
-      const systemPromptEdge = edges.find(
-        edge => edge.target === id && edge.targetHandle === 'system_prompt'
-      );
+      const systemPromptEdge = edges.find(edge => edge.target === id && edge.targetHandle === 'system_prompt');
       if (systemPromptEdge) {
         const systemNode = nodes.find(node => node.id === systemPromptEdge.source);
         return systemNode?.data.value || '';
@@ -142,33 +166,23 @@ export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeDa
     }
     return data.systemPrompt || '';
   };
-  
-  // Get images from connected image nodes
+
   const getConnectedImages = (): string[] => {
     const images: string[] = [];
-    
     if (connectionStatus.hasImages) {
-      const imageEdges = edges.filter(
-        edge => edge.target === id && edge.targetHandle === 'images'
-      );
-      
-      imageEdges.forEach(edge => {
-        const imageNode = nodes.find(node => node.id === edge.source);
-        if (imageNode?.data.image) {
-          images.push(imageNode.data.image);
-        }
-      });
+      edges
+        .filter(edge => edge.target === id && edge.targetHandle === 'images')
+        .forEach(edge => {
+          const imageNode = nodes.find(node => node.id === edge.source);
+          if (imageNode?.data.image) images.push(imageNode.data.image);
+        });
     }
-    
-    if (data.image) {
-      images.push(data.image);
-    }
-    
+    if (data.image) images.push(data.image);
     return images;
   };
-  
+
   const handleRun = async () => {
-    if (!canRun) return;
+    if (!connectionStatus.hasUserMessage) return;
     
     setIsRunning(true);
     updateNode(id, { isLoading: true, error: undefined, response: undefined });
@@ -178,457 +192,559 @@ export default function LLMNode({ id, data, selected }: NodeProps<WorkflowNodeDa
       const systemPrompt = getSystemPrompt();
       const images = getConnectedImages();
       
-      const requestData = {
-        model: selectedModel,
-        systemPrompt: systemPrompt,
-        userMessage: userMessage,
-        images: images,
-      };
-      
       const response = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify({
+          model: selectedModel,
+          systemPrompt,
+          userMessage,
+          images,
+        }),
       });
       
       const result = await response.json();
       
       if (result.error) {
-        updateNode(id, { 
-          error: result.error, 
-          isLoading: false,
-          response: undefined 
-        });
+        updateNode(id, { error: result.error, isLoading: false, response: undefined });
       } else {
-        updateNode(id, { 
-          response: result.text, 
-          isLoading: false,
-          error: undefined 
-        });
+        updateNode(id, { response: result.text, isLoading: false, error: undefined });
       }
     } catch (error: any) {
-      updateNode(id, { 
-        error: 'Failed to process request: ' + error.message, 
-        isLoading: false,
-        response: undefined 
-      });
+      updateNode(id, { error: 'Failed to process request: ' + error.message, isLoading: false, response: undefined });
     } finally {
       setIsRunning(false);
     }
   };
-  
+
   const handleCopy = () => {
     if (data.response) {
       navigator.clipboard.writeText(data.response);
-      // Optional: Add a toast notification
-      updateNode(id, { error: 'Copied to clipboard!' });
+      updateNode(id, { error: '✓ Copied to clipboard' });
       setTimeout(() => updateNode(id, { error: undefined }), 2000);
     }
   };
-  
+
+  // Models
+  const MODELS = [
+    { 
+      id: 'gemini-2.5-flash', 
+      name: 'Gemini Flash 2.5', 
+      description: 'Ultra-fast inference, multimodal',
+      speed: '⚡ 300ms',
+      context: '1M tokens',
+      supportsVision: true,
+      color: 'from-cyan-400 to-blue-500'
+    },
+    { 
+      id: 'gemini-2.5-pro', 
+      name: 'Gemini Pro 2.5', 
+      description: 'Most capable reasoning',
+      speed: '⏱️ 2s',
+      context: '2M tokens',
+      supportsVision: true,
+      color: 'from-purple-400 to-fuchsia-500'
+    },
+    { 
+      id: 'gemini-2.0-flash', 
+      name: 'Gemini Flash 2.0', 
+      description: 'Balanced performance',
+      speed: '⚡ 400ms',
+      context: '1M tokens',
+      supportsVision: true,
+      color: 'from-amber-300 to-orange-500'
+    },
+    { 
+      id: 'claude-3.5-sonnet', 
+      name: 'Claude 3.5 Sonnet', 
+      description: 'Creative & analytical',
+      speed: '⏱️ 1.5s',
+      context: '200K tokens',
+      supportsVision: true,
+      color: 'from-emerald-400 to-green-500'
+    },
+  ];
+
   const currentModel = MODELS.find(m => m.id === selectedModel);
+  const currentSize = NODE_SIZES[nodeSize];
+  const canRun = connectionStatus.hasUserMessage;
   const hasImageInput = connectionStatus.hasImages || data.image;
-  
-  // Handle scroll on textarea - stop propagation
-  const handleTextareaScroll = (e: React.WheelEvent<HTMLTextAreaElement>) => {
-    e.stopPropagation();
-    const textarea = e.currentTarget;
-    
-    // Check if we're at the top or bottom to allow canvas scroll
-    const isAtTop = textarea.scrollTop === 0;
-    const isAtBottom = textarea.scrollHeight - textarea.scrollTop === textarea.clientHeight;
-    
-    // Only prevent default if we have more content to scroll
-    if (!(isAtTop && e.deltaY < 0) && !(isAtBottom && e.deltaY > 0)) {
-      e.preventDefault();
-    }
-  };
-  
-  // Handle touch scroll on mobile
-  const handleTextareaTouchMove = (e: React.TouchEvent<HTMLTextAreaElement>) => {
-    e.stopPropagation();
-  };
-  
+
   return (
     <div 
+      ref={nodeRef}
       className={cn(
-        "px-4 py-3 shadow-lg rounded-xl bg-white min-w-70 relative group transition-all duration-150",
+        "shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm overflow-hidden",
+        currentSize.padding,
         selected 
-          ? "border-2 border-purple-500 shadow-purple-100" 
-          : "border border-gray-200 hover:border-gray-300"
+          ? "border-2 border-amber-500/50 shadow-amber-500/20 bg-linear-to-br from-gray-900 to-gray-800" 
+          : "border border-gray-700/50 hover:border-gray-600/50 bg-linear-to-br from-gray-800 to-gray-900"
       )}
+      style={{ width: currentSize.width }}
       onClick={(e) => {
-        if (!(e.target as HTMLElement).closest('.node-menu')) {
+        const target = e.target as HTMLElement;
+        if (!target.closest('.node-menu') && !target.closest('.resize-handle') && !target.closest('.size-preset-btn')) {
           setSelectedNode(id);
         }
       }}
+      onWheel={(e) => {
+        // Stop wheel events from propagating to React Flow when we're over the node
+        const target = e.target as HTMLElement;
+        if (target.closest('.scroll-container') || target.closest('.node-content')) {
+          e.stopPropagation();
+        }
+      }}
     >
-      {/* Node Menu */}
-      <div className="node-menu">
-        <NodeMenu
-          nodeId={id}
-          nodeType="llm"
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onConfigure={handleConfigure}
-          position="top-right"
-        />
+      {/* Glow effect */}
+      {selected && (
+        <div className="absolute inset-0 bg-linear-to-br from-amber-500/10 via-orange-500/5 to-transparent rounded-2xl -z-10" />
+      )}
+
+      {/* Border resize indicator */}
+      <div className={cn(
+        "absolute inset-0 pointer-events-none border-2 border-transparent transition-all duration-300",
+        isHoveringResize && "border-amber-400/30"
+      )} />
+
+      <NodeMenu
+        nodeId={id}
+        nodeType="llm"
+        onDelete={handleDelete}
+        onDuplicate={handleDuplicate}
+        onConfigure={() => console.log('Configure:', id)}
+        position="top-right"
+        className="bg-gray-800/90! border-gray-700/50!"
+      />
+      
+      {/* Resize handle */}
+      <div 
+        className={cn(
+          "resize-handle absolute -bottom-2 -right-2 w-5 h-5 bg-linear-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg z-50 transition-all opacity-0 group-hover:opacity-100",
+          isHoveringResize && "scale-110"
+        )}
+        onMouseEnter={() => setIsHoveringResize(true)}
+        onMouseLeave={() => setIsHoveringResize(false)}
+        title="Click size buttons to resize"
+      >
+        <Maximize2 size={10} className="text-white" />
       </div>
       
-      {/* Selection indicator */}
-      {selected && (
-        <div className="absolute -top-2 -right-2 w-4 h-4 bg-purple-500 rounded-full flex items-center justify-center z-10">
-          <div className="w-1.5 h-1.5 bg-white rounded-full" />
+      {/* Size presets */}
+      <div className="size-control absolute -top-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 bg-linear-to-r from-gray-800 to-gray-900 border border-gray-700/50 rounded-full px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+        <div className="flex items-center gap-1">
+          {(['small', 'medium', 'large'] as NodeSize[]).map((size) => (
+            <button
+              key={size}
+              onClick={() => handleResizeClick(size)}
+              className={cn(
+                "size-preset-btn w-6 h-6 flex items-center justify-center rounded text-xs transition-all",
+                nodeSize === size
+                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+              )}
+              title={size.charAt(0).toUpperCase() + size.slice(1)}
+            >
+              {size.charAt(0).toUpperCase()}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
       
       {/* Input Handles */}
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-3 h-3 border-2! transition-all",
-          selected ? "border-white! scale-110" : "border-white!"
-        )}
-        style={{ 
-          backgroundColor: selected ? '#8B5CF6' : '#8B5CF6',
-          top: '30%' 
-        }}
+        className="w-4 h-4 border-2 border-gray-900 transition-all duration-300 hover:scale-110"
+        style={{ backgroundColor: '#3b82f6', backdropFilter: 'blur(4px)', top: '35%' }}
         id="system_prompt"
       />
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-3 h-3 border-2! transition-all",
-          selected ? "border-white! scale-110" : "border-white!"
-        )}
-        style={{ 
-          backgroundColor: selected ? '#3B82F6' : '#3B82F6',
-          top: '50%' 
-        }}
+        className="w-4 h-4 border-2 border-gray-900 transition-all duration-300 hover:scale-110"
+        style={{ backgroundColor: '#8b5cf6', backdropFilter: 'blur(4px)', top: '50%' }}
         id="user_message"
       />
       <Handle
         type="target"
         position={Position.Left}
-        className={cn(
-          "w-3 h-3 border-2! transition-all",
-          selected ? "border-white! scale-110" : "border-white!"
-        )}
-        style={{ 
-          backgroundColor: selected ? '#10B981' : '#10B981',
-          top: '70%' 
-        }}
+        className="w-4 h-4 border-2 border-gray-900 transition-all duration-300 hover:scale-110"
+        style={{ backgroundColor: '#10b981', backdropFilter: 'blur(4px)', top: '65%' }}
         id="images"
       />
       
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-          <div className={cn(
-            "w-5 h-5 rounded-md flex items-center justify-center mr-2",
-            selected ? "bg-purple-100" : "bg-purple-50"
-          )}>
-            <span className={cn(
-              "text-xs font-bold",
-              selected ? "text-purple-600" : "text-purple-500"
+          <div className="relative mr-3">
+            <div className="absolute inset-0 bg-linear-to-br from-amber-400 to-orange-500 rounded-xl blur opacity-30" />
+            <div className={cn(
+              "relative w-10 h-10 rounded-xl flex items-center justify-center",
+              selected ? "bg-linear-to-br from-amber-500 to-orange-600" : "bg-linear-to-br from-amber-400/90 to-orange-500/90"
             )}>
-              <Brain size={12} />
-            </span>
+              <Brain size={18} className="text-white" />
+            </div>
           </div>
           <div>
             <h3 className={cn(
-              "text-sm font-semibold",
-              selected ? "text-purple-700" : "text-gray-800"
-            )}>Run Any LLM</h3>
-            <p className="text-xs text-gray-500">Text generation + vision analysis</p>
+              "font-bold tracking-tight text-lg",
+              selected 
+                ? "bg-linear-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent" 
+                : "text-gray-100"
+            )}>
+              AI Processor
+            </h3>
+            <p className="text-xs text-gray-400/70 font-mono tracking-wide">Multi-modal inference engine</p>
           </div>
         </div>
-        <Button
+        
+        {/* Run button */}
+        <button
           onClick={handleRun}
           disabled={!canRun || isRunning}
-          isLoading={isRunning}
-          size="sm"
-          variant={canRun ? "default" : "secondary"}
           className={cn(
-            "min-w-20",
-            selected && "bg-purple-600 hover:bg-purple-700"
+            "relative px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300",
+            canRun && !isRunning
+              ? "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-lg hover:shadow-amber-500/30"
+              : "bg-gray-800/50 border border-gray-700/50 text-gray-400",
+            isRunning && "from-amber-600 to-orange-600 cursor-wait"
           )}
-          title={!canRun ? "Connect a Text Node to run" : "Run LLM"}
         >
-          {isRunning ? 'Running...' : 'Run'}
-        </Button>
+          {isRunning ? (
+            <span className="flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Processing
+            </span>
+          ) : (
+            <span className="flex items-center gap-2">
+              <Play size={14} />
+              Execute
+            </span>
+          )}
+        </button>
       </div>
-      
-      {/* Connection Status */}
-      <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <div className={cn(
-            "flex flex-col items-center p-1 rounded",
-            connectionStatus.hasUserMessage 
-              ? 'bg-blue-50 border border-blue-100' 
-              : 'bg-gray-100'
-          )}>
+
+      {/* Status indicator */}
+      <div className="flex items-center justify-between mb-4 p-3 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className={cn(
-              "w-2 h-2 rounded-full mb-1",
-              connectionStatus.hasUserMessage ? 'bg-blue-500' : 'bg-gray-400'
+              "w-2 h-2 rounded-full transition-all duration-300",
+              connectionStatus.hasUserMessage ? "bg-emerald-400 animate-pulse" : "bg-gray-600"
             )} />
             <span className={cn(
-              connectionStatus.hasUserMessage 
-                ? 'text-blue-700 font-medium' 
-                : 'text-gray-500'
+              "text-xs font-medium transition-colors",
+              connectionStatus.hasUserMessage ? "text-emerald-300" : "text-gray-400"
             )}>
-              {connectionStatus.hasUserMessage ? '✓ Text' : 'No Text'}
+              Input
             </span>
           </div>
-          <div className={cn(
-            "flex flex-col items-center p-1 rounded",
-            connectionStatus.hasSystemPrompt 
-              ? 'bg-purple-50 border border-purple-100' 
-              : 'bg-gray-100'
-          )}>
+          <div className="flex items-center gap-2">
             <div className={cn(
-              "w-2 h-2 rounded-full mb-1",
-              connectionStatus.hasSystemPrompt ? 'bg-purple-500' : 'bg-gray-400'
+              "w-2 h-2 rounded-full transition-all duration-300",
+              connectionStatus.hasSystemPrompt ? "bg-blue-400" : "bg-gray-600"
             )} />
             <span className={cn(
-              connectionStatus.hasSystemPrompt 
-                ? 'text-purple-700 font-medium' 
-                : 'text-gray-500'
+              "text-xs font-medium transition-colors",
+              connectionStatus.hasSystemPrompt ? "text-blue-300" : "text-gray-400"
             )}>
-              {connectionStatus.hasSystemPrompt ? '✓ System' : 'System'}
+              System
             </span>
           </div>
-          <div className={cn(
-            "flex flex-col items-center p-1 rounded",
-            connectionStatus.hasImages 
-              ? 'bg-green-50 border border-green-100' 
-              : 'bg-gray-100'
-          )}>
+          <div className="flex items-center gap-2">
             <div className={cn(
-              "w-2 h-2 rounded-full mb-1",
-              connectionStatus.hasImages ? 'bg-green-500' : 'bg-gray-400'
+              "w-2 h-2 rounded-full transition-all duration-300",
+              connectionStatus.hasImages ? "bg-fuchsia-400" : "bg-gray-600"
             )} />
             <span className={cn(
-              connectionStatus.hasImages 
-                ? 'text-green-700 font-medium' 
-                : 'text-gray-500'
+              "text-xs font-medium transition-colors",
+              connectionStatus.hasImages ? "text-fuchsia-300" : "text-gray-400"
             )}>
-              {connectionStatus.hasImages ? '✓ Images' : 'No Images'}
+              Vision
             </span>
           </div>
         </div>
         
         {!connectionStatus.hasUserMessage && (
-          <div className="mt-2 p-2 bg-amber-50 border border-amber-100 rounded text-xs text-amber-700">
-            <div className="flex items-center">
-              <AlertCircle size={12} className="mr-2" />
-              <span>Connect a <strong>Text Node</strong> to the <strong className="text-blue-600">blue handle</strong> to run</span>
-            </div>
+          <div className="text-xs text-amber-400/80 flex items-center gap-1">
+            <AlertCircle size={12} />
+            <span>Connect text input</span>
           </div>
         )}
       </div>
-      
-      {/* Content Area - SCROLLABLE CONTAINER */}
-      <div className="space-y-3 max-h-100 overflow-y-auto pr-1 scrollbar-thin">
-        {/* Model Selection */}
-        <div>
-          <label className="text-xs font-medium text-gray-700 mb-1 block">
-            Gemini Model
-          </label>
-          <select
-            value={selectedModel}
-            onChange={(e) => {
-              setSelectedModel(e.target.value);
-              updateNode(id, { model: e.target.value });
-            }}
-            className={cn(
-              "w-full text-sm border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-              selected ? "border-purple-300" : "border-gray-300"
+
+      {/* Main scrollable content - FIXED SCROLLING */}
+      <div 
+        ref={scrollContainerRef}
+        className={cn(
+          "node-content scroll-container space-y-4 overflow-y-auto pr-1",
+          currentSize.maxHeight,
+          "hover-scroll" // Custom scroll behavior
+        )}
+        onWheel={(e) => {
+          // Handle scroll propagation
+          e.stopPropagation();
+        }}
+      >
+        {/* Model selector */}
+        <div className="relative group/model">
+          <div className="absolute inset-0 bg-linear-to-br from-gray-800/30 to-transparent rounded-xl opacity-0 group-hover/model:opacity-100 transition-opacity" />
+          <div className="relative p-3 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Cpu size={14} className="text-amber-300" />
+                <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  Inference Model
+                </label>
+              </div>
+              <span className="text-xs text-gray-500 font-mono">v2.5</span>
+            </div>
+            
+            <select
+              value={selectedModel}
+              onChange={(e) => {
+                setSelectedModel(e.target.value);
+                updateNode(id, { model: e.target.value });
+              }}
+              className="w-full bg-gray-900/50 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all appearance-none"
+            >
+              {MODELS.map((model) => (
+                <option key={model.id} value={model.id} className="bg-gray-900">
+                  {model.name}
+                </option>
+              ))}
+            </select>
+            
+            {currentModel && (
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-400">{currentModel.description}</span>
+                  <span className="text-amber-300/70 font-mono">{currentModel.speed}</span>
+                </div>
+                <span className="text-gray-500 font-mono">{currentModel.context}</span>
+              </div>
             )}
-          >
-            {MODELS.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
-          {currentModel && (
-            <p className="text-xs text-gray-500 mt-1">
-              {currentModel.description}
-            </p>
-          )}
+          </div>
         </div>
-        
-        {/* System Prompt (only show if NOT connected) */}
+
+        {/* System prompt - Only if not connected */}
         {!connectionStatus.hasSystemPrompt && (
-          <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">
-              System Prompt (Optional)
-            </label>
+          <div className="p-3 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Settings size={14} className="text-blue-300" />
+              <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                System Instructions
+              </label>
+            </div>
             <textarea
               value={data.systemPrompt || ''}
               onChange={(e) => updateNode(id, { systemPrompt: e.target.value })}
-              placeholder="You are a helpful assistant..."
-              className={cn(
-                "w-full text-sm border rounded-lg px-3 py-2 min-h-15 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-                selected ? "border-purple-300" : "border-gray-300"
-              )}
+              placeholder="Define AI behavior and constraints..."
+              className="w-full bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 resize-none"
               rows={2}
               onWheel={(e) => e.stopPropagation()}
             />
           </div>
         )}
-        
-        {connectionStatus.hasSystemPrompt && (
-          <div className="p-2 bg-purple-50 border border-purple-200 rounded-lg">
-            <div className="flex items-center text-purple-700">
-              <Link size={14} className="mr-2" />
-              <span className="text-xs font-medium">System prompt from connected node</span>
-            </div>
-          </div>
-        )}
-        
-        {/* Error State */}
+
+        {/* Status indicators */}
         {data.error && (
-          <div className="p-2 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center text-red-700">
-              <AlertCircle size={14} className="mr-2" />
-              <span className="text-xs font-medium">Error</span>
+          <div className="p-3 bg-linear-to-br from-red-900/20 to-red-900/10 rounded-xl border border-red-700/30">
+            <div className="flex items-center gap-2 text-red-300">
+              <AlertCircle size={14} />
+              <span className="text-sm font-medium">Error</span>
             </div>
-            <p className="text-xs text-red-600 mt-1">{data.error}</p>
+            <p className="text-xs text-red-400/80 mt-1">{data.error}</p>
           </div>
         )}
-        
-        {/* Loading State */}
+
         {data.isLoading && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center justify-center">
-              <LoadingSpinner size="sm" color="blue" showText text="Processing..." />
+          <div className="p-4 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-linear-to-r from-amber-500/20 to-orange-500/20 rounded-full blur animate-pulse" />
+                  <div className="relative w-8 h-8 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-200">Processing</div>
+                  <div className="text-xs text-gray-400">Analyzing {hasImageInput ? 'multimodal input' : 'text input'}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Clock size={12} />
+                <span>~2s</span>
+              </div>
             </div>
-            <p className="text-xs text-center text-blue-600 mt-2">
-              Analyzing {hasImageInput ? 'image and text' : 'text'}...
-            </p>
+            <div className="mt-3 h-1 bg-gray-800/50 rounded-full overflow-hidden">
+              <div className="h-full bg-linear-to-r from-amber-500 to-orange-500 animate-pulse" />
+            </div>
           </div>
         )}
-        
-        {/* SUCCESS RESPONSE - FULL TEXT DISPLAY */}
+
+        {/* Response */}
         {data.response && !data.isLoading && (
-          <div ref={outputRef} className="bg-green-50 border border-green-300 rounded-lg overflow-hidden">
-            {/* Response Header */}
-            <div className="p-3 border-b border-green-300 bg-green-100 flex items-center justify-between">
-              <div className="flex items-center text-green-900">
-                <CheckCircle size={16} className="mr-2 text-green-700" />
-                <span className="text-sm font-semibold">LLM Response</span>
-                <span className="ml-2 text-xs text-green-700 bg-green-200 px-2 py-0.5 rounded-full">
-                  {Math.ceil(data.response.length / 4)} tokens
-                </span>
+          <div className="bg-linear-to-br from-gray-900/40 to-gray-800/40 rounded-xl border border-gray-700/30 overflow-hidden">
+            <div className="p-3 border-b border-gray-700/30 bg-linear-to-r from-gray-800/50 to-gray-900/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-sm font-semibold text-gray-100">Output</span>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="px-2 py-0.5 bg-emerald-900/30 text-emerald-300 rounded-full border border-emerald-700/30">
+                    {Math.ceil(data.response.length / 4)} tokens
+                  </span>
+                  <span className="px-2 py-0.5 bg-blue-900/30 text-blue-300 rounded-full border border-blue-700/30">
+                    {data.response.split(' ').length} words
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center text-xs text-blue-700 hover:text-blue-900 font-medium bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded-lg transition-colors"
-                  title="Copy to clipboard"
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 transition-colors"
                 >
-                  <Copy size={12} className="mr-1" />
+                  <Copy size={12} />
                   Copy
                 </button>
               </div>
             </div>
             
-            {/* FULL RESPONSE TEXT AREA - NO TRIMMING */}
-            <div className="p-3 bg-white">
-              <textarea
-                ref={textareaRef}
-                readOnly
-                value={data.response}
-                className="w-full text-sm text-gray-800 bg-white border-0 focus:outline-none focus:ring-0 resize-none font-mono leading-relaxed whitespace-pre-wrap scrollbar-thin"
-                rows={Math.min(Math.max(data.response.split('\n').length, 3), 20)}
-                style={{ 
-                  minHeight: '60px',
-                  maxHeight: '300px',
-                  overflowY: 'auto'
-                }}
-                onWheel={handleTextareaScroll}
-                onTouchMove={handleTextareaTouchMove}
-              />
+            <div className="p-4">
+              <div 
+                ref={outputRef}
+                className="font-mono text-sm text-gray-300 leading-relaxed whitespace-pre-wrap max-h-50 overflow-y-auto scrollbar-thin"
+                style={{ minHeight: '80px' }}
+              >
+                {data.response}
+              </div>
             </div>
             
-            {/* Footer Stats */}
-            <div className="px-3 py-2 border-t border-green-200 bg-green-50 text-xs text-green-800 flex justify-between items-center">
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
-                  <span>{data.response.length} characters</span>
+            <div className="px-3 py-2 border-t border-gray-700/30 bg-linear-to-r from-gray-900/50 to-gray-800/50 text-xs text-gray-400 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <Shield size={12} />
+                  <span>Secure inference</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 mr-1"></div>
-                  <span>{data.response.split(' ').length} words</span>
+                <div className="flex items-center gap-1">
+                  <Layers size={12} />
+                  <span>{data.response.length} chars</span>
                 </div>
               </div>
               <button
-                onClick={() => {
-                  if (textareaRef.current) {
-                    textareaRef.current.scrollTop = 0;
-                  }
-                }}
-                className="text-green-700 hover:text-green-900 flex items-center text-xs"
+                onClick={() => outputRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="text-gray-400 hover:text-amber-300 transition-colors"
               >
-                <ChevronUp size={12} className="mr-1" />
-                Scroll to top
+                <ChevronUp size={14} />
               </button>
             </div>
           </div>
         )}
       </div>
-      
+
       {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}
-        className={cn(
-          "w-3 h-3 border-2! transition-all",
-          selected ? "border-white! scale-110" : "border-white!"
-        )}
+        className="w-4 h-4 border-2 border-gray-900 transition-all duration-300 hover:scale-110"
         style={{ 
-          backgroundColor: selected ? '#10B981' : '#10B981',
-          top: '50%' 
+          backgroundColor: '#10b981',
+          backdropFilter: 'blur(4px)',
+          top: '50%'
         }}
         id="output"
       />
       
-      {/* Node Footer */}
-      <div className="flex items-center justify-between mt-2">
-        <div className="text-xs text-gray-500 flex items-center">
-          <div className={`w-2 h-2 rounded-full mr-1 ${canRun ? 'bg-green-500' : 'bg-gray-400'}`} />
-          <span>{canRun ? 'Ready to run' : 'Connect text input'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {selected && (
-            <div className="text-xs text-gray-400 flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs border border-gray-300">Del</kbd>
-              <span>to delete</span>
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700/30">
+        <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-1">
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              canRun ? "bg-emerald-400 animate-pulse" : "bg-gray-600"
+            )} />
+            <span className={cn(
+              canRun ? "text-emerald-300" : "text-gray-400"
+            )}>
+              {canRun ? 'Ready' : 'Awaiting input'}
+            </span>
+          </div>
+          {connectionStatus.hasImages && (
+            <div className="flex items-center gap-1 text-fuchsia-300">
+              <ImageIcon size={12} />
+              <span>Vision enabled</span>
             </div>
           )}
-          {connectionStatus.hasImages && (
-            <span className="text-xs text-green-600 flex items-center">
-              <ImageIcon size={12} className="mr-1" />
-              Vision
-            </span>
-          )}
+        </div>
+        
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="font-mono">AI-{selectedModel.split('-')[2] || 'PRO'}</span>
+          <div className="w-1 h-1 rounded-full bg-gray-600" />
+          <span>Multimodal</span>
         </div>
       </div>
-      
-      {/* Delete button for touch devices */}
+
+      {/* Delete button */}
       {selected && (
         <button
           onClick={handleDelete}
-          className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-red-500 text-white text-xs rounded-lg shadow-lg hover:bg-red-600 transition-colors z-10"
+          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-linear-to-br from-red-500/20 to-red-600/20 text-red-300 text-xs rounded-xl shadow-lg hover:from-red-500/30 hover:to-red-600/30 hover:text-white transition-all duration-200 z-10 backdrop-blur-sm border border-red-500/30"
+          onMouseDown={(e) => e.stopPropagation()}
         >
           Delete Node
         </button>
       )}
+
+      {/* CSS for better scrolling */}
+      <style jsx>{`
+        .scroll-container {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(75, 85, 99, 0.5) rgba(31, 41, 55, 0.3);
+        }
+        
+        .scroll-container::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        
+        .scroll-container::-webkit-scrollbar-track {
+          background: rgba(31, 41, 55, 0.3);
+          border-radius: 3px;
+        }
+        
+        .scroll-container::-webkit-scrollbar-thumb {
+          background: rgba(75, 85, 99, 0.5);
+          border-radius: 3px;
+          transition: background 0.2s ease;
+        }
+        
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(107, 114, 128, 0.7);
+        }
+        
+        .hover-scroll {
+          /* Make scrolling smoother */
+          scroll-behavior: smooth;
+        }
+        
+        /* Custom select styling */
+        select {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+          background-position: right 0.5rem center;
+          background-repeat: no-repeat;
+          background-size: 1rem;
+          padding-right: 2rem;
+        }
+        
+        /* Disable text selection on scroll handles */
+        .scroll-container {
+          user-select: none;
+        }
+        
+        /* Enable text selection in content areas */
+        .scroll-container * {
+          user-select: text;
+        }
+      `}</style>
     </div>
   );
 }
