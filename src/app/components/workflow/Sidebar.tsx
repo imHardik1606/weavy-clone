@@ -82,18 +82,18 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-68 h-full flex flex-col bg-gradient-to-b from-gray-900 via-gray-900/95 to-gray-900/90 backdrop-blur-xl border-r border-gray-800/50 shadow-2xl shadow-black/30">
+    <div className="w-68 h-full flex flex-col bg-linear-to-b from-gray-900 via-gray-900/95 to-gray-900/90 backdrop-blur-xl border-r border-gray-800/50 shadow-2xl shadow-black/30">
       {/* Decorative top accent */}
-      <div className="h-1 bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-amber-500" />
+      <div className="h-1 bg-linear-to-r from-cyan-500 via-fuchsia-500 to-amber-500" />
       
       {/* Header - Fixed position */}
-      <div className="p-5 border-b border-gray-800/40 bg-gradient-to-b from-gray-900 to-gray-900/80 shrink-0">
+      <div className="p-5 border-b border-gray-800/40 bg-linear-to-b from-gray-900 to-gray-900/80 shrink-0">
         <div className="flex items-center space-x-3 mb-2">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl blur opacity-30" />
+            <div className="absolute inset-0 bg-linear-to-br from-cyan-500 to-blue-600 rounded-xl blur opacity-30" />
             <Sparkles className="relative w-6 h-6 text-cyan-300" />
           </div>
-          <h2 className="text-xl font-bold bg-gradient-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent">
+          <h2 className="text-xl font-bold bg-linear-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent">
             Weavy Canvas
           </h2>
         </div>
@@ -119,8 +119,8 @@ export default function Sidebar() {
                   activeButton === node.id ? 'scale-95' : 'hover:scale-[1.02]'
                 }`}
               >
-                <div className={`relative w-10 h-10 rounded-lg bg-gradient-to-br ${node.color} flex items-center justify-center mr-3`}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-lg" />
+                <div className={`relative w-10 h-10 rounded-lg bg-linear-to-br ${node.color} flex items-center justify-center mr-3`}>
+                  <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent rounded-lg" />
                   <node.icon className="relative w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 text-left">
@@ -151,7 +151,7 @@ export default function Sidebar() {
               />
               <button
                 onClick={() => saveWorkflow(workflowName)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-br from-fuchsia-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 rounded-lg transition-all duration-200 shadow-lg hover:shadow-fuchsia-500/25"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-linear-to-br from-fuchsia-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 rounded-lg transition-all duration-200 shadow-lg hover:shadow-fuchsia-500/25"
               >
                 <Save className="w-4 h-4 text-white" />
               </button>
@@ -187,7 +187,7 @@ export default function Sidebar() {
         
         {/* Help Section */}
         <div className="p-4">
-          <div className="p-3 bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-gray-700/30 rounded-xl">
+          <div className="p-3 bg-linear-to-br from-gray-900/50 to-gray-800/30 border border-gray-700/30 rounded-xl">
             <div className="text-xs text-gray-400/70 mb-2">💡 Quick Tips</div>
             <ul className="text-xs text-gray-500 space-y-1">
               <li className="flex items-start">
@@ -211,7 +211,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-800/30 bg-gray-900/80 shrink-0">
         <div className="flex items-center justify-between text-xs text-gray-500/60">
           <span>Weavy Canvas v1.0</span>
-          <span className="px-2 py-1 bg-gradient-to-r from-gray-800/50 to-gray-900/50 rounded-full">
+          <span className="px-2 py-1 bg-linear-to-r from-gray-800/50 to-gray-900/50 rounded-full">
             βeta
           </span>
         </div>
