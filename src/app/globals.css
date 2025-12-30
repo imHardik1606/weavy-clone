@@ -171,3 +171,26 @@ body {
   margin: 1rem 0;
   background-color: #eff6ff;
 }
+
+@theme {
+  --font-body: var(--font-inter);
+  --font-mono: var(--font-mono);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+  }
+}
+
+@layer utilities {
+  .font-inter {
+    font-family: var(--font-body);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+
