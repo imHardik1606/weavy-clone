@@ -1,7 +1,7 @@
 import { Node, Edge, Connection } from 'reactflow';
 
 export interface WorkflowNodeData {
-  label: string;
+  label?: string;
   value?: string;
   image?: string;
   model?: string;
@@ -9,6 +9,12 @@ export interface WorkflowNodeData {
   isLoading?: boolean;
   error?: string;
   response?: string;
+  
+  // Add node sizing
+  nodeSize?: 'small' | 'medium' | 'large';
+  
+  // Add any other node-specific data here
+  [key: string]: any;
 }
 
 export type NodeType = 'text' | 'image' | 'llm';
