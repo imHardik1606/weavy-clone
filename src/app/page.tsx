@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/workflow/Sidebar';
 import WorkflowCanvas from '../app/components/workflow/Canvas';
 import { 
@@ -21,7 +21,9 @@ import {
   Download,
   Upload,
   Sliders,
-  Code
+  Code,
+  Check,
+  Edit2
 } from 'lucide-react';
 import { useWorkflowStore } from './lib/store/useWorkflowStore';
 import { useKeyboardShortcuts } from './lib/hooks/useKeyboardShortcuts';
@@ -81,6 +83,10 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSavePopup, setShowSavePopup] = useState(false);
+  const [workflowName, setWorkflowName] = useState('My Workflow');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // CORRECT UNDO/REDO HOOKS
   const undo = useWorkflowStore((state) => state.undo); // Function to call
@@ -107,6 +113,54 @@ export default function Home() {
     saveWorkflow('my-workflow');
     setTimeout(() => setIsSaving(false), 1000);
   };
+
+  // Handle save from sidebar
+  const handleSidebarSave = () => {
+    setShowSavePopup(true);
+  };
+
+  const handleSaveConfirm = () => {
+    if (workflowName.trim()) {
+      setIsEditingName(false);
+      
+      // Save the workflow
+      saveWorkflow(workflowName);
+      
+      // Show success animation
+      setTimeout(() => {
+        setShowSavePopup(false);
+      }, 1500);
+    }
+  };
+
+  const handleSaveCancel = () => {
+    setShowSavePopup(false);
+    setIsEditingName(false);
+    setWorkflowName('My Workflow');
+  };
+
+  const handleEditName = () => {
+    setIsEditingName(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 100);
+  };
+
+  // Close save popup on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showSavePopup) {
+        handleSaveCancel();
+      }
+      if (e.key === 'Enter' && showSavePopup && isEditingName) {
+        handleSaveConfirm();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSavePopup, isEditingName]);
 
   return (
     <div className="h-screen flex flex-col bg-linear-to-br from-gray-950 via-gray-900 to-gray-950 overflow-hidden">
@@ -290,9 +344,134 @@ export default function Home() {
         </div>
       )}
       
+      {/* Save Workflow Popup */}
+      {showSavePopup && (
+        <div 
+          className="fixed inset-0 bg-gray-950/80 backdrop-blur-xl flex items-center justify-center z-40 animate-fade-in"
+          onClick={handleSaveCancel}
+        >
+          <div 
+            className="bg-linear-to-br from-gray-900 to-gray-800 rounded-2xl border border-gray-700/50 shadow-2xl shadow-black/40 w-full max-w-md mx-4 overflow-hidden transform transition-all duration-300 scale-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="p-6 border-b border-gray-700/50 bg-linear-to-r from-gray-900/50 to-gray-800/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-linear-to-br from-cyan-500 to-blue-500 rounded-lg blur opacity-30" />
+                    <Download className="relative w-6 h-6 text-cyan-300" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-100">
+                    {isEditingName ? 'Edit Workflow Name' : 'Workflow Saved!'}
+                  </h3>
+                </div>
+                {!isEditingName && (
+                  <button
+                    onClick={handleSaveCancel}
+                    className="p-2 hover:bg-gray-800/50 rounded-xl transition-colors text-gray-400 hover:text-white"
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Modal content */}
+            <div className="p-6">
+              {isEditingName ? (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Workflow Name
+                    </label>
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      value={workflowName}
+                      onChange={(e) => setWorkflowName(e.target.value)}
+                      className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700/50 rounded-xl text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+                      placeholder="Enter workflow name"
+                      autoFocus
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSaveCancel}
+                      className="flex-1 px-4 py-3 bg-linear-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-gray-300 rounded-xl text-sm font-medium transition-all duration-300 border border-gray-700/50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveConfirm}
+                      disabled={!workflowName.trim()}
+                      className={cn(
+                        "flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2",
+                        workflowName.trim()
+                          ? "bg-linear-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg hover:shadow-cyan-500/30"
+                          : "bg-linear-to-r from-gray-700 to-gray-800 text-gray-500 cursor-not-allowed"
+                      )}
+                    >
+                      <Download size={14} />
+                      <span>Save</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8">
+                  {/* Success animation */}
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="relative mb-6">
+                      {/* Animated rings */}
+                      <div className="absolute inset-0 bg-linear-to-br from-emerald-500/20 to-green-500/20 rounded-full blur animate-pulse" />
+                      
+                      {/* Outer ring animation */}
+                      <div className="absolute -inset-2 border-2 border-emerald-500/30 rounded-full animate-ping opacity-75" />
+                      
+                      {/* Checkmark icon with animation */}
+                      <div className="w-20 h-20 rounded-full bg-linear-to-br from-emerald-500 to-green-600 flex items-center justify-center relative animate-scale-in">
+                        <Check className="w-10 h-10 text-white animate-checkmark" />
+                      </div>
+                    </div>
+                    
+                    <h4 className="text-xl font-bold text-gray-100 mb-2 animate-fade-in-up">
+                      Workflow Saved!
+                    </h4>
+                    
+                    <div className="flex items-center gap-3 mb-6 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                      <p className="text-gray-400">Saved as:</p>
+                      <div className="flex items-center gap-2 group">
+                        <p className="text-cyan-300 font-medium px-3 py-1.5 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                          {workflowName}
+                        </p>
+                        <button
+                          onClick={handleEditName}
+                          className="p-1.5 hover:bg-gray-800/50 rounded-lg transition-colors text-gray-400 hover:text-cyan-300 opacity-0 group-hover:opacity-100"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={handleSaveCancel}
+                      className="px-6 py-2.5 bg-linear-to-r from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800 text-gray-300 rounded-xl text-sm font-medium transition-all duration-300 border border-gray-700/50 animate-fade-in-up"
+                      style={{ animationDelay: '0.3s' }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {sidebarOpen && <Sidebar />}
+        {sidebarOpen && <Sidebar onSaveClick={handleSidebarSave} />}
         
         {/* Canvas Area */}
         <div className="flex-1 overflow-hidden relative">
@@ -352,6 +531,75 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Add CSS animations */}
+      <style jsx>{`
+        @keyframes scale-in {
+          0% {
+            transform: scale(0);
+            opacity: 0;
+          }
+          70% {
+            transform: scale(1.1);
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes checkmark {
+          0% {
+            stroke-dashoffset: 100;
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          70% {
+            transform: scale(1.2);
+          }
+          100% {
+            stroke-dashoffset: 0;
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        @keyframes fade-in-up {
+          0% {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes fade-in {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        
+        .animate-scale-in {
+          animation: scale-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        .animate-checkmark {
+          animation: checkmark 0.8s ease-out forwards;
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 0.5s ease-out forwards;
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

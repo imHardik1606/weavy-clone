@@ -3,15 +3,9 @@ import {
   Type,
   Image as ImageIcon,
   Brain,
-  Search,
-  FolderOpen,
   Save,
   Download,
   Upload,
-  Sparkles,
-  Plus,
-  Layers,
-  Palette,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -39,7 +33,11 @@ const NODE_TYPES = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  onSaveClick?: () => void;
+}
+
+export default function Sidebar({ onSaveClick }: SidebarProps) {
   const addNode = useWorkflowStore((state) => state.addNode);
   const saveWorkflow = useWorkflowStore((state) => state.saveWorkflow);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
@@ -77,6 +75,14 @@ export default function Sidebar() {
         importWorkflow(event.target?.result as string);
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleSave = () => {
+    saveWorkflow(workflowName);
+    // Notify parent component about save click
+    if (onSaveClick) {
+      onSaveClick();
     }
   };
 
@@ -133,7 +139,7 @@ export default function Sidebar() {
         "
       >
         <button
-          onClick={() => saveWorkflow(workflowName)}
+          onClick={handleSave}
           title="Save"
           className="
             w-10 h-10
