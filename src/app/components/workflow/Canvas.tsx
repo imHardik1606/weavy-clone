@@ -6,6 +6,9 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   Node,
+  NodeChange,
+  EdgeChange,
+  Connection,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useWorkflowStore } from '../../lib/store/useWorkflowStore';
@@ -42,6 +45,21 @@ export default function WorkflowCanvas() {
   const onPaneClick = useCallback(() => {
     setSelectedNode(null);
   }, [setSelectedNode]);
+
+  // Handle nodes change with proper typing for undo/redo
+  const handleNodesChange = useCallback((changes: NodeChange[]) => {
+    onNodesChange(changes);
+  }, [onNodesChange]);
+
+  // Handle edges change with proper typing for undo/redo
+  const handleEdgesChange = useCallback((changes: EdgeChange[]) => {
+    onEdgesChange(changes);
+  }, [onEdgesChange]);
+
+  // Handle connection with proper typing for undo/redo
+  const handleConnect = useCallback((connection: Connection) => {
+    onConnect(connection);
+  }, [onConnect]);
 
   // Enhanced nodes with selected state
   const enhancedNodes: Node<WorkflowNodeData>[] = nodes.map(node => ({
@@ -89,9 +107,9 @@ export default function WorkflowCanvas() {
       <ReactFlow
         nodes={enhancedNodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onNodesChange={handleNodesChange}  // Updated for undo/redo
+        onEdgesChange={handleEdgesChange}  // Updated for undo/redo
+        onConnect={handleConnect}          // Updated for undo/redo
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
         fitView
@@ -112,6 +130,16 @@ export default function WorkflowCanvas() {
           stroke: '#8b5cf6',
           strokeWidth: 2,
         }}
+        // UNDO/REDO CRITICAL SETTINGS:
+        nodeDragThreshold={10} // Prevents accidental drags from interfering with clicks
+        selectionOnDrag={false} // Prevents selection during drag
+        nodesFocusable={true}
+        elementsSelectable={true}
+        selectNodesOnDrag={false}
+        panOnDrag={[0, 1, 2]} // Allow panning with left mouse
+        panOnScroll={true}
+        zoomOnScroll={true}
+        zoomOnDoubleClick={false}
       >
         {/* Primary dotted background - simpler config */}
         <Background 

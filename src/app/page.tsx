@@ -81,13 +81,19 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const undo = useWorkflowStore((state) => state.undo);
-  const redo = useWorkflowStore((state) => state.redo);
+  
+  // CORRECT UNDO/REDO HOOKS
+  const undo = useWorkflowStore((state) => state.undo); // Function to call
+  const redo = useWorkflowStore((state) => state.redo); // Function to call
+  const canUndo = useWorkflowStore((state) => state.canUndo()); // Boolean - note the ()
+  const canRedo = useWorkflowStore((state) => state.canRedo()); // Boolean - note the ()
   const deleteSelectedNode = useWorkflowStore((state) => state.deleteSelectedNode);
   const selectedNode = useWorkflowStore((state) => state.selectedNode);
   const saveWorkflow = useWorkflowStore((state) => state.saveWorkflow);
   const nodes = useWorkflowStore((state) => state.nodes);
   const edges = useWorkflowStore((state) => state.edges);
+  const past = useWorkflowStore((state) => state.past); // Get history arrays
+  const future = useWorkflowStore((state) => state.future);
   
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -172,20 +178,34 @@ export default function Home() {
           
           <div className="w-px h-6 bg-gray-700/50 mx-2" />
           
+          {/* FIXED UNDO BUTTON */}
           <button
             onClick={undo}
-            className="p-2.5 hover:bg-gray-800/50 rounded-xl transition-all duration-300 group"
-            title="Undo (⌘+Z)"
+            disabled={!canUndo}
+            className={cn(
+              "p-2.5 rounded-xl transition-all duration-300 group",
+              canUndo 
+                ? "hover:bg-gray-800/50 text-gray-300 group-hover:text-cyan-300" 
+                : "opacity-40 cursor-not-allowed text-gray-600"
+            )}
+            title={`Undo (⌘+Z) ${canUndo ? '' : '(disabled)'}`}
           >
-            <Undo2 className="w-5 h-5 text-gray-300 group-hover:text-cyan-300" />
+            <Undo2 className="w-5 h-5" />
           </button>
           
+          {/* FIXED REDO BUTTON */}
           <button
             onClick={redo}
-            className="p-2.5 hover:bg-gray-800/50 rounded-xl transition-all duration-300 group"
-            title="Redo (⌘+⇧+Z)"
+            disabled={!canRedo}
+            className={cn(
+              "p-2.5 rounded-xl transition-all duration-300 group",
+              canRedo 
+                ? "hover:bg-gray-800/50 text-gray-300 group-hover:text-blue-300" 
+                : "opacity-40 cursor-not-allowed text-gray-600"
+            )}
+            title={`Redo (⌘+⇧+Z) ${canRedo ? '' : '(disabled)'}`}
           >
-            <Redo2 className="w-5 h-5 text-gray-300 group-hover:text-blue-300" />
+            <Redo2 className="w-5 h-5" />
           </button>
           
           <div className="w-px h-6 bg-gray-700/50 mx-2" />
@@ -334,7 +354,21 @@ export default function Home() {
       </div>
       
       {/* Status Bar - Minimal */}
-      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-end">
+      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            <Undo2 size={10} />
+            <span>{past.length}</span>
+          </div>
+          <span>•</span>
+          <div className="flex items-center gap-1">
+            <Redo2 size={10} />
+            <span>{future.length}</span>
+          </div>
+          <div className="text-xs text-gray-500 ml-4">
+            History: {past.length} undo • {future.length} redo
+          </div>
+        </div>
         
         <div className="flex text-end items-center gap-4">
           <button
