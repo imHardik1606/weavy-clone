@@ -128,39 +128,11 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-linear-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent tracking-tight">
-                Weavy Canvas
+                FlowGen Canvas
               </h1>
-              <p className="text-xs text-gray-400/80 font-mono tracking-wide">AI workflow orchestrator</p>
+              <p className="text-md text-gray-200/80 font-mono tracking-wide">AI workflow orchestrator</p>
             </div>
           </div>
-          
-          <div className="hidden md:flex items-center gap-2">
-            <div className="px-3 py-1 bg-linear-to-r from-cyan-500/10 to-blue-500/10 backdrop-blur-sm text-cyan-300 text-xs font-medium rounded-full border border-cyan-500/20">
-              v1.2.0
-            </div>
-            <div className="px-3 py-1 bg-linear-to-r from-fuchsia-500/10 to-purple-500/10 backdrop-blur-sm text-fuchsia-300 text-xs font-medium rounded-full border border-fuchsia-500/20">
-              LLM Workflows
-            </div>
-          </div>
-        </div>
-        
-        {/* Center controls */}
-        <div className="flex items-center space-x-2">
-          {selectedNode && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-linear-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-sm rounded-xl border border-gray-700/50 mr-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-linear-to-r from-cyan-400 to-blue-500 animate-pulse" />
-                <span className="text-sm font-medium text-gray-200">Selected</span>
-              </div>
-              <button
-                onClick={deleteSelectedNode}
-                className="ml-2 px-3 py-1 bg-linear-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 text-red-300 hover:text-red-200 text-xs rounded-lg border border-red-500/30 transition-all duration-200 flex items-center gap-1.5"
-              >
-                <Trash2 size={12} />
-                <span>Delete</span>
-              </button>
-            </div>
-          )}
         </div>
         
         {/* Right side */}
@@ -330,7 +302,7 @@ export default function Home() {
                 <div className="w-2 h-2 rounded-full bg-linear-to-r from-cyan-400 to-blue-500 animate-pulse" />
                 <span className="text-sm font-medium text-gray-200">Node Selected</span>
                 <div className="text-xs text-gray-400 font-mono bg-gray-800/50 px-2 py-1 rounded">
-                  {selectedNode.substring(0, 8)}...
+                  {selectedNode}
                 </div>
               </div>
               <div className="w-px h-4 bg-gray-700/50" />
@@ -362,32 +334,18 @@ export default function Home() {
       </div>
       
       {/* Status Bar - Minimal */}
-      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center gap-2">
-            <Globe className="w-4 h-4 text-cyan-400/70" />
-            <span className="text-xs">Gemini API • Connected</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-amber-400/70" />
-            <span className="text-xs">GPU Accelerated</span>
-          </div>
-          <div className="hidden md:flex items-center gap-2">
-            <Layers className="w-4 h-4 text-fuchsia-400/70" />
-            <span className="text-xs">Multi-modal Processing</span>
-          </div>
-        </div>
+      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-end">
         
-        <div className="flex items-center gap-4">
+        <div className="flex text-end items-center gap-4">
           <button
             onClick={() => setShowShortcuts(true)}
             className="text-gray-500 hover:text-cyan-300 text-xs flex items-center gap-1.5 transition-colors"
           >
-            <Keyboard size={12} />
-            <span>Shortcuts</span>
+            <Keyboard size={18} className='text-md text-gray-200 font-mono'/>
+            <span className='text-md text-gray-200 font-mono'>Shortcuts</span>
           </button>
-          <div className="text-xs text-gray-500 font-mono">
-            v1.2.0 • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          <div className="text-md text-gray-200 font-mono">
+            v1.0.0 • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
       </footer>

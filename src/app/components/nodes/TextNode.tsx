@@ -6,17 +6,8 @@ import { cn } from "../../lib/utils/cn";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { 
   Type, 
-  Maximize2, 
-  Minimize2, 
-  TextCursor, 
-  Hash, 
-  Copy, 
-  AlignLeft,
-  Bold,
-  Italic,
-  Search,
-  Sparkles,
-  Move
+  Maximize2,
+  Trash
 } from "lucide-react";
 
 // Extend the base type to include nodeSize
@@ -214,7 +205,7 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
     <div 
       ref={nodeRef}
       className={cn(
-        "shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm overflow-hidden select-none",
+        "shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm select-none",
         paddingClass,
         selected 
           ? "border-2 border-cyan-500/60 shadow-cyan-500/20 bg-linear-to-br from-gray-900 to-gray-800" 
@@ -257,19 +248,6 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
           isHoveringResize && "border-cyan-400/30"
         )}
       />
-
-      {/* Node Menu */}
-      <div className="node-menu">
-        <NodeMenu
-          nodeId={id}
-          nodeType="text"
-          onDelete={handleDelete}
-          onDuplicate={handleDuplicate}
-          onConfigure={handleConfigure}
-          position="top-right"
-          className="bg-gray-800/90! border-gray-700/50!"
-        />
-      </div>
       
       {/* Resize handles at corners - FIXED: Using custom drag handler */}
       <div 
@@ -366,49 +344,16 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
           </div>
           <div>
             <h3 className={cn(
-              "font-bold tracking-wide",
-              currentSize.fontSize === 'sm' ? 'text-sm' : currentSize.fontSize === 'base' ? 'text-base' : 'text-lg',
+              "font-bold tracking-wide font-inter",
+              currentSize.fontSize === 'sm' ? 'text-md' : currentSize.fontSize === 'base' ? 'text-base' : 'text-lg',
               selected 
                 ? "bg-linear-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent" 
                 : "text-gray-200"
             )}>
               Text Input
             </h3>
-            <p className="text-xs text-gray-400/70 mt-0.5">Raw text for AI processing</p>
+            <p className="text-md font-mono text-gray-200/90 mt-0.5">Raw text for AI processing</p>
           </div>
-        </div>
-        
-        {/* Formatting controls */}
-        <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setFontStyle(fontStyle === 'normal' ? 'italic' : fontStyle === 'italic' ? 'bold' : 'normal');
-            }}
-            className={cn(
-              "p-1.5 rounded hover:bg-gray-700/50 transition-colors",
-              fontStyle === 'italic' && "text-cyan-300",
-              fontStyle === 'bold' && "text-cyan-400 font-bold"
-            )}
-            title={fontStyle === 'normal' ? 'Italic' : fontStyle === 'italic' ? 'Bold' : 'Normal'}
-          >
-            {fontStyle === 'italic' ? <Italic size={12} /> : 
-             fontStyle === 'bold' ? <Bold size={12} /> : 
-             <TextCursor size={12} className="text-gray-400" />}
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setAlignment(alignment === 'left' ? 'center' : alignment === 'center' ? 'right' : 'left');
-            }}
-            className="p-1.5 rounded hover:bg-gray-700/50 transition-colors text-gray-400 hover:text-gray-300"
-            title={`Align ${alignment}`}
-          >
-            <AlignLeft size={12} className={cn(
-              alignment === 'center' && 'text-center',
-              alignment === 'right' && 'text-right'
-            )} />
-          </button>
         </div>
       </div>
       
@@ -462,30 +407,6 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
         </div>
       </div>
       
-      {/* Character Count & Analysis */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 text-xs text-gray-400">
-            <Hash size={10} />
-            <span>{data.value?.length || 0} characters</span>
-          </div>
-          {data.value && (
-            <div className="flex items-center gap-1 text-xs text-green-400/70">
-              <Search size={10} />
-              <span>{getSentenceCount()} sentences</span>
-            </div>
-          )}
-        </div>
-        
-        {data.value && data.value.length > 100 && (
-          <div className="flex items-center gap-1 text-xs">
-            <div className="px-2 py-1 bg-linear-to-r from-cyan-500/20 to-blue-500/20 backdrop-blur-sm text-cyan-300 rounded-lg border border-cyan-500/30">
-              {Math.ceil(data.value.length / 1000)}k tokens
-            </div>
-          </div>
-        )}
-      </div>
-      
       {/* Text analysis bar */}
       {data.value && (
         <div className="relative h-1 bg-gray-800/50 rounded-full overflow-hidden mb-3">
@@ -516,44 +437,6 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
         id="text"
       />
       
-      {/* Footer with contextual info */}
-      <div className={cn("flex items-center justify-between", 
-        currentSize.fontSize === 'sm' ? 'text-xs' : 
-        currentSize.fontSize === 'base' ? 'text-sm' : 
-        'text-base'
-      )}>
-        <div className="text-gray-400 flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <Type size={currentSize.iconSize} className="text-cyan-400/70" />
-            <span>Text Data</span>
-          </div>
-          {data.value && data.value.trim().length > 0 && (
-            <div className="text-green-400/70 flex items-center gap-1">
-              <Sparkles size={currentSize.iconSize} />
-              <span>LLM Ready</span>
-            </div>
-          )}
-        </div>
-        
-        {/* Copy button */}
-        {data.value && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigator.clipboard.writeText(data.value || '');
-              const btn = e.currentTarget;
-              btn.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-              setTimeout(() => {
-                btn.innerHTML = `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
-              }, 1000);
-            }}
-            className="p-1 hover:bg-gray-700/50 rounded transition-colors text-gray-400 hover:text-cyan-300"
-            title="Copy text"
-          >
-            <Copy size={currentSize.iconSize} />
-          </button>
-        )}
-      </div>
       
       {/* Processing indicator */}
       {data.value && (
@@ -575,7 +458,7 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
           className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-linear-to-br from-red-500 to-red-600 text-white text-xs rounded-lg shadow-lg hover:from-red-400 hover:to-red-500 transition-all duration-200 z-10 backdrop-blur-sm border border-red-500/30"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          Delete Node
+          <Trash size={18} className="inline-block mr-1 font-extrabold" />
         </button>
       )}
 

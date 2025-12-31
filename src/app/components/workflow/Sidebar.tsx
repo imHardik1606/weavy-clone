@@ -45,7 +45,6 @@ export default function Sidebar() {
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
   const importWorkflow = useWorkflowStore((state) => state.importWorkflow);
   const [workflowName, setWorkflowName] = useState('My Workflow');
-  const [searchQuery, setSearchQuery] = useState('');
   const [activeButton, setActiveButton] = useState<string | null>(null);
   
   const handleAddNode = (type: string) => {
@@ -87,14 +86,14 @@ export default function Sidebar() {
       <div className="h-1 bg-linear-to-r from-cyan-500 via-fuchsia-500 to-amber-500" />
       
       {/* Header - Fixed position */}
-      <div className="p-5 border-b border-gray-800/40 bg-linear-to-b from-gray-900 to-gray-900/80 shrink-0">
+      <div className="p-2 text-center border-b border-gray-800/40 bg-linear-to-b from-gray-900 to-gray-900/80 shrink-0">
         <div className="flex items-center space-x-3 mb-2">
           <div className="relative">
             <div className="absolute inset-0 bg-linear-to-br from-cyan-500 to-blue-600 rounded-xl blur opacity-30" />
             <Sparkles className="relative w-6 h-6 text-cyan-300" />
           </div>
           <h2 className="text-xl font-bold bg-linear-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent">
-            Weavy Canvas
+            FlowGen
           </h2>
         </div>
         <p className="text-sm text-gray-400/80 font-light tracking-wide">
@@ -204,16 +203,6 @@ export default function Sidebar() {
               </li>
             </ul>
           </div>
-        </div>
-      </div>
-      
-      {/* Footer - Fixed position */}
-      <div className="p-4 border-t border-gray-800/30 bg-gray-900/80 shrink-0">
-        <div className="flex items-center justify-between text-xs text-gray-500/60">
-          <span>Weavy Canvas v1.0</span>
-          <span className="px-2 py-1 bg-linear-to-r from-gray-800/50 to-gray-900/50 rounded-full">
-            βeta
-          </span>
         </div>
       </div>
     </div>

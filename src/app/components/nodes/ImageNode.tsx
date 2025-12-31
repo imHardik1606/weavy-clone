@@ -1,7 +1,6 @@
 import { Handle, Position, NodeProps } from "reactflow";
-import { Upload, X, Image as ImageIcon, Maximize2, Minimize2, ImageUp, Scan, Palette, Sparkles, Eye, Crop } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Maximize2, Minimize2, ImageUp, Trash2Icon, Eye, Crop, Trash } from "lucide-react";
 import { cn } from "../../lib/utils/cn";
-import { NodeMenu } from "../../components/ui/NodeMenu";
 import { WorkflowNodeData } from "../../lib/types/workflow";
 import { useWorkflowStore } from "../../lib/store/useWorkflowStore";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -204,9 +203,9 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
 
   const currentSize = SIZE_PRESETS[nodeSize];
   const fontSizeClass = {
-    'sm': 'text-xs',
-    'base': 'text-sm',
-    'lg': 'text-base'
+    'sm': 'text-md',
+    'base': 'text-lg',
+    'lg': 'text-xl'
   }[currentSize.fontSize];
 
   return (
@@ -248,7 +247,7 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
         className={cn(
           "px-5 py-4 shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm",
           selected 
-            ? "border-2 border-fuchsia-500/60 shadow-fuchsia-500/20 bg-linear-to-br from-gray-900 to-gray-800" 
+            ? "border-2 border-red-500/60 shadow-red-500/20 bg-linear-to-br from-gray-900 to-gray-800" 
             : "border border-gray-700/50 hover:border-gray-600/50 bg-linear-to-br from-gray-800 to-gray-900"
         )}
         style={{ width: currentSize.width }}
@@ -272,21 +271,8 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
       >
         {/* Background glow effect */}
         {selected && (
-          <div className="absolute inset-0 bg-linear-to-br from-fuchsia-500/10 via-purple-500/5 to-transparent rounded-2xl -z-10" />
+          <div className="absolute inset-0 bg-linear-to-br from-red-500/10 via-orange-500/5 to-transparent rounded-2xl -z-10" />
         )}
-
-        {/* Node Menu */}
-        <div className="node-menu">
-          <NodeMenu
-            nodeId={id}
-            nodeType="image"
-            onDelete={handleDelete}
-            onDuplicate={handleDuplicate}
-            onConfigure={handleConfigure}
-            position="top-right"
-            className="bg-gray-800/90! border-gray-700/50!"
-          />
-        </div>
         
         {/* Resize handle */}
         <div 
@@ -332,50 +318,27 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center">
             <div className="relative mr-2">
-              <div className="absolute inset-0 bg-linear-to-br from-fuchsia-400 to-purple-500 rounded-lg blur opacity-30" />
+              <div className="absolute inset-0 bg-linear-to-br from-red-400 to-orange-500 rounded-lg blur opacity-30" />
               <div className={cn(
                 "relative w-8 h-8 rounded-lg flex items-center justify-center",
-                selected ? "bg-linear-to-br from-fuchsia-500 to-purple-600" : "bg-linear-to-br from-fuchsia-400/90 to-purple-500/90"
+                selected ? "bg-linear-to-br from-red-500 to-orange-600" : "bg-linear-to-br from-red-400/90 to-orange-500/90"
               )}>
                 <ImageUp size={currentSize.iconSize} className="text-white" />
               </div>
             </div>
             <div>
-              <h3 className={cn(
+              <h2 className={cn(
                 "font-bold tracking-wide",
                 fontSizeClass,
                 selected 
-                  ? "bg-linear-to-r from-fuchsia-300 to-cyan-300 bg-clip-text text-transparent" 
+                  ? "bg-linear-to-r from-red-300 to-cyan-300 bg-clip-text text-transparent" 
                   : "text-gray-200"
               )}>
                 Vision Input
-              </h3>
-              <p className="text-xs text-gray-400/70 mt-0.5">Process images with AI</p>
+              </h2>
+              <p className="text-md font-mono text-gray-200/90 mt-0.5">Process images with AI</p>
             </div>
           </div>
-          
-          {/* Quick actions */}
-          {data.image && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={toggleFullscreen}
-                className="fullscreen-btn p-1.5 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg transition-colors"
-                title="Preview full image"
-              >
-                <Eye size={12} className="text-gray-300" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateNode(id, { ...data, image: "" });
-                }}
-                className="p-1.5 bg-linear-to-br from-red-500/20 to-red-600/20 hover:from-red-500/30 hover:to-red-600/30 border border-red-500/30 rounded-lg transition-all"
-                title="Clear image"
-              >
-                <X size={12} className="text-red-300" />
-              </button>
-            </div>
-          )}
         </div>
 
         {data.image ? (
@@ -434,12 +397,8 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
                   <span>{imageDimensions.width} × {imageDimensions.height}</span>
                 </div>
               )}
-              <div className="px-2 py-1 bg-linear-to-r from-fuchsia-500/20 to-purple-500/20 backdrop-blur-sm text-xs text-fuchsia-300 rounded-lg border border-fuchsia-500/30 flex items-center gap-1">
-                <Palette size={10} />
-                <span>RGB</span>
-              </div>
-              <div className="px-2 py-1 bg-linear-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-sm text-xs text-cyan-300 rounded-lg border border-cyan-500/30 flex items-center gap-1">
-                <ImageIcon size={10} />
+              <div className="px-2 py-1 bg-linear-to-r from-blue-500/20 to-cyan-500/20 backdrop-blur-sm text-md text-cyan-300 rounded-lg border border-cyan-500/30 flex items-center gap-1">
+                <ImageIcon size={16} />
                 <span>{(data.image.length * 3) / 4 / 1024 > 1024 
                   ? `${((data.image.length * 3) / 4 / 1024 / 1024).toFixed(2)} MB` 
                   : `${Math.round((data.image.length * 3) / 4 / 1024)} KB`}
@@ -452,9 +411,9 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
             className={cn(
               "upload-area border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 mb-3",
               dragOver 
-                ? "border-fuchsia-400 bg-linear-to-br from-fuchsia-500/10 to-purple-500/10" 
-                : "border-gray-700/50 hover:border-fuchsia-400/50 hover:bg-gray-800/30",
-              selected && "border-fuchsia-300/50"
+                ? "border-red-400 bg-linear-to-br from-red-500/10 to-orange-500/10" 
+                : "border-gray-700/50 hover:border-red-400/50 hover:bg-gray-800/30",
+              selected && "border-red-300/50"
             )}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -468,18 +427,18 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
             style={{ cursor: 'pointer' }}
           >
             <div className="relative mb-3">
-              <div className="absolute inset-0 bg-linear-to-br from-fuchsia-500/20 to-cyan-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-linear-to-br from-red-500/20 to-cyan-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative w-12 h-12 mx-auto mb-3 bg-linear-to-br from-gray-800 to-gray-900 border border-gray-700/50 rounded-xl flex items-center justify-center">
                 <Upload className={cn(
                   "transition-colors duration-300",
-                  dragOver ? "text-fuchsia-300" : "text-gray-400 group-hover:text-fuchsia-300"
+                  dragOver ? "text-red-300" : "text-gray-400 group-hover:text-red-300"
                 )} size={20} />
               </div>
             </div>
             <p className={cn(
               "font-medium mb-1",
               fontSizeClass,
-              dragOver ? "text-fuchsia-300" : "text-gray-300"
+              dragOver ? "text-red-300" : "text-gray-300"
             )}>
               {dragOver ? "Drop image here" : "Drag & drop or click to upload"}
             </p>
@@ -514,35 +473,6 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
           }}
           id="image"
         />
-        
-        {/* Footer with contextual info */}
-        <div className={cn("flex items-center justify-between mt-3", fontSizeClass)}>
-          <div className="text-gray-400 flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <ImageIcon size={currentSize.iconSize} className="text-fuchsia-400/70" />
-              <span>Image Data</span>
-            </div>
-            {data.image && (
-              <div className="text-green-400/70 flex items-center gap-1">
-                <Sparkles size={currentSize.iconSize} />
-                <span>Vision Ready</span>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Performance indicator */}
-        {data.image && (
-          <div className="mt-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">Processing ready</span>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-linear-to-r from-green-400 to-cyan-400 animate-pulse" />
-                <span className="text-green-400/90 font-medium">GPU Optimized</span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Delete node button (visible when selected) */}
         {selected && (
@@ -551,19 +481,9 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
             className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-linear-to-br from-red-500 to-red-600 text-white text-xs rounded-lg shadow-lg hover:from-red-400 hover:to-red-500 transition-all duration-200 z-10 backdrop-blur-sm border border-red-500/30"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            Delete Node
+            <Trash2Icon size={18} className="inline-block mr-1 font-extrabold" />
           </button>
         )}
-
-        {/* CSS for resize cursor */}
-        <style jsx>{`
-          .resize-handle:hover {
-            transform: scale(1.1);
-          }
-          .resize-handle:active {
-            transform: scale(0.95);
-          }
-        `}</style>
       </div>
     </>
   );
