@@ -114,29 +114,12 @@ export default function Home() {
       <header className="relative bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-b border-gray-800/50 px-5 py-3.5 flex items-center justify-between z-30">
         {/* Left side */}
         <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2.5 hover:bg-gray-800/50 rounded-xl transition-all duration-300 group"
-          >
-            <div className="relative">
-              <div className="absolute inset-0 bg-linear-to-br from-cyan-500/20 to-blue-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity" />
-              {sidebarOpen ? 
-                <X className="relative w-5 h-5 text-gray-300 group-hover:text-white" /> : 
-                <Menu className="relative w-5 h-5 text-gray-300 group-hover:text-white" />
-              }
-            </div>
-          </button>
           
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-linear-to-br from-amber-400 to-orange-500 rounded-xl blur opacity-20" />
-              <Sparkles className="relative w-6 h-6 text-amber-300" />
-            </div>
             <div>
               <h1 className="text-xl font-bold bg-linear-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent tracking-tight">
                 FlowGen Canvas
               </h1>
-              <p className="text-md text-gray-200/80 font-mono tracking-wide">AI workflow orchestrator</p>
             </div>
           </div>
         </div>
@@ -354,21 +337,7 @@ export default function Home() {
       </div>
       
       {/* Status Bar - Minimal */}
-      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <div className="flex items-center gap-1">
-            <Undo2 size={10} />
-            <span>{past.length}</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
-            <Redo2 size={10} />
-            <span>{future.length}</span>
-          </div>
-          <div className="text-xs text-gray-500 ml-4">
-            History: {past.length} undo • {future.length} redo
-          </div>
-        </div>
+      <footer className="bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-t border-gray-800/50 px-5 py-2.5 text-sm text-gray-400 flex items-center justify-end">
         
         <div className="flex text-end items-center gap-4">
           <button
