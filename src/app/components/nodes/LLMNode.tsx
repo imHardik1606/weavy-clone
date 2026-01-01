@@ -2,28 +2,22 @@ import { Handle, Position, NodeProps } from "reactflow";
 import {
   Play,
   AlertCircle,
-  CheckCircle,
   Image as ImageIcon,
-  Link,
   Copy,
   ChevronUp,
   Brain,
-  Zap,
-  Sparkles,
   Cpu,
   Maximize2,
-  Minimize2,
   Settings,
   Clock,
   Layers,
   Shield,
+  Trash2,
 } from "lucide-react";
 import { WorkflowNodeData } from "../../lib/types/workflow";
 import { useWorkflowStore } from "../../lib/store/useWorkflowStore";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { NodeMenu } from "../../components/ui/NodeMenu";
+import { useState, useEffect, useRef} from "react";
 import { cn } from "../../lib/utils/cn";
-
 const NODE_SIZES = {
   small: { width: 380, padding: "px-4 py-3", maxHeight: "max-h-[350px]" },
   medium: { width: 480, padding: "px-5 py-4", maxHeight: "max-h-[400px]" },
@@ -306,7 +300,7 @@ export default function LLMNode({
     <div
       ref={nodeRef}
       className={cn(
-        "shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm overflow-hidden",
+        "shadow-2xl rounded-2xl relative group transition-all duration-300 backdrop-blur-sm",
         currentSize.padding,
         selected
           ? "border-2 border-amber-500/50 shadow-amber-500/20 bg-linear-to-br from-gray-900 to-gray-800"
@@ -368,7 +362,7 @@ export default function LLMNode({
               key={size}
               onClick={() => handleResizeClick(size)}
               className={cn(
-                "size-preset-btn w-6 h-6 flex items-center justify-center rounded text-xs transition-all",
+                "size-preset-btn w-6 h-6 flex items-center justify-center rounded text-md transition-all",
                 nodeSize === size
                   ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                   : "text-gray-400 hover:text-white hover:bg-gray-700/50"
@@ -454,7 +448,7 @@ export default function LLMNode({
           onClick={handleRun}
           disabled={!canRun || isRunning}
           className={cn(
-            "relative px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 gap-2",
+            "relative px-4 py-2 rounded-xl font-medium text-md transition-all duration-300 gap-2",
             canRun && !isRunning
               ? "bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow-lg hover:shadow-amber-500/30"
               : "bg-gray-800/50 border border-gray-700/50 text-gray-400",
@@ -489,7 +483,7 @@ export default function LLMNode({
             />
             <span
               className={cn(
-                "text-sm font-medium transition-colors",
+                "text-md font-medium transition-colors",
                 connectionStatus.hasUserMessage
                   ? "text-emerald-300"
                   : "text-gray-400"
@@ -509,7 +503,7 @@ export default function LLMNode({
             />
             <span
               className={cn(
-                "text-sm font-medium transition-colors",
+                "text-md font-medium transition-colors",
                 connectionStatus.hasSystemPrompt
                   ? "text-blue-300"
                   : "text-gray-400"
@@ -529,7 +523,7 @@ export default function LLMNode({
             />
             <span
               className={cn(
-                "text-sm font-medium transition-colors",
+                "text-md font-medium transition-colors",
                 connectionStatus.hasImages
                   ? "text-fuchsia-300"
                   : "text-gray-400"
@@ -541,7 +535,7 @@ export default function LLMNode({
         </div>
 
         {!connectionStatus.hasUserMessage && (
-          <div className="text-sm text-amber-400/80 flex items-center gap-1.5">
+          <div className="text-md text-amber-400/80 flex items-center gap-1.5">
             <AlertCircle size={14} />
             <span>Connect text input</span>
           </div>
@@ -568,7 +562,7 @@ export default function LLMNode({
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Cpu size={14} className="text-amber-300" />
-                <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                <label className="text-md font-semibold text-gray-300 uppercase tracking-wider">
                   LLM Model
                 </label>
               </div>
@@ -580,7 +574,7 @@ export default function LLMNode({
                 setSelectedModel(e.target.value);
                 updateNode(id, { model: e.target.value });
               }}
-              className="w-full bg-gray-900/50 border border-gray-700/50 rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all appearance-none"
+              className="w-full bg-gray-900/50 border border-gray-700/50 rounded-lg px-3 py-2.5 text-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/30 transition-all appearance-none"
             >
               {MODELS.map((model) => (
                 <option key={model.id} value={model.id} className="bg-gray-900">
@@ -589,21 +583,7 @@ export default function LLMNode({
               ))}
             </select>
 
-            {currentModel && (
-              <div className="mt-2 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-400">
-                    {currentModel.description}
-                  </span>
-                  <span className="text-amber-300/70 font-mono">
-                    {currentModel.speed}
-                  </span>
-                </div>
-                <span className="text-gray-500 font-mono">
-                  {currentModel.context}
-                </span>
-              </div>
-            )}
+          
           </div>
         </div>
 
@@ -612,7 +592,7 @@ export default function LLMNode({
           <div className="p-3 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30">
             <div className="flex items-center gap-2 mb-2">
               <Settings size={14} className="text-blue-300" />
-              <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+              <label className="text-md font-semibold text-gray-300 uppercase tracking-wider">
                 System Instructions
               </label>
             </div>
@@ -620,7 +600,7 @@ export default function LLMNode({
               value={data.systemPrompt || ""}
               onChange={(e) => updateNode(id, { systemPrompt: e.target.value })}
               placeholder="Define AI behavior and constraints..."
-              className="w-full bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 resize-none"
+              className="w-full bg-gray-900/30 border border-gray-700/50 rounded-lg px-3 py-2 text-md text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 resize-none"
               rows={2}
               onWheel={(e) => e.stopPropagation()}
             />
@@ -632,9 +612,9 @@ export default function LLMNode({
           <div className="p-3 bg-linear-to-br from-red-900/20 to-red-900/10 rounded-xl border border-red-700/30">
             <div className="flex items-center gap-2 text-red-300">
               <AlertCircle size={14} />
-              <span className="text-sm font-medium">Error</span>
+              <span className="text-md font-medium">Error</span>
             </div>
-            <p className="text-xs text-red-400/80 mt-1">{data.error}</p>
+            <p className="text-md text-red-400/80 mt-1">{data.error}</p>
           </div>
         )}
 
@@ -647,16 +627,16 @@ export default function LLMNode({
                   <div className="relative w-8 h-8 border-2 border-amber-500/30 border-t-amber-400 rounded-full animate-spin" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-200">
+                  <div className="text-md font-medium text-gray-200">
                     Processing
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-md text-gray-400">
                     Analyzing{" "}
                     {hasImageInput ? "multimodal input" : "text input"}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center gap-2 text-md text-gray-500">
                 <Clock size={12} />
                 <span>~2s</span>
               </div>
@@ -685,7 +665,7 @@ export default function LLMNode({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-md text-gray-300 hover:text-white bg-gray-800/50 hover:bg-gray-700/50 rounded-lg border border-gray-700/50 transition-colors"
                 >
                   <Copy size={12} />
                   Copy
@@ -696,14 +676,14 @@ export default function LLMNode({
             <div className="p-4">
               <div
                 ref={outputRef}
-                className="font-mono text-sm text-gray-300 leading-relaxed whitespace-pre-wrap max-h-50 overflow-y-auto scrollbar-thin"
+                className="font-mono text-md text-gray-300 leading-relaxed whitespace-pre-wrap max-h-50 overflow-y-auto scrollbar-thin"
                 style={{ minHeight: "80px" }}
               >
                 {data.response}
               </div>
             </div>
 
-            <div className="px-3 py-2 border-t border-gray-700/30 bg-linear-to-r from-gray-900/50 to-gray-800/50 text-xs text-gray-400 flex justify-between items-center">
+            <div className="px-3 py-2 border-t border-gray-700/30 bg-linear-to-r from-gray-900/50 to-gray-800/50 text-md text-gray-400 flex justify-between items-center">
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <Shield size={12} />
@@ -742,7 +722,7 @@ export default function LLMNode({
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-700/30">
-        <div className="flex items-center gap-3 text-xs">
+        <div className="flex items-center gap-3 text-md">
           <div className="flex items-center gap-1">
             <div
               className={cn(
@@ -762,7 +742,7 @@ export default function LLMNode({
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-md text-gray-500">
           <span className="font-mono">
             AI-{selectedModel.split("-")[2] || "PRO"}
           </span>
@@ -775,10 +755,10 @@ export default function LLMNode({
       {selected && (
         <button
           onClick={handleDelete}
-          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-linear-to-br from-red-500/20 to-red-600/20 text-red-300 text-xs rounded-xl shadow-lg hover:from-red-500/30 hover:to-red-600/30 hover:text-white transition-all duration-200 z-10 backdrop-blur-sm border border-red-500/30"
+          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-linear-to-br from-red-500 to-red-600 text-white text-md rounded-lg shadow-lg hover:from-red-400 hover:to-red-500 transition-all duration-200 z-10 backdrop-blur-sm border border-red-500/30"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          Delete Node
+          <Trash2 size={14} className="inline-block mr-1" />
         </button>
       )}
 

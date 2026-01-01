@@ -369,7 +369,7 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
             ref={textareaRef}
             value={data.value || ""}
             onChange={(e) => updateNode(id, { ...data, value: e.target.value })}
-            placeholder="Enter your text here... (Markdown supported)"
+            placeholder="Enter your prompt here"
             className={cn(
               "w-full bg-transparent text-gray-200 placeholder-gray-500 resize-none focus:outline-none focus:ring-0",
               textStyleClass,
@@ -389,21 +389,6 @@ export default function TextNode({ id, data, selected }: NodeProps<ExtendedWorkf
             "absolute inset-0 pointer-events-none bg-linear-to-b from-transparent via-gray-900/10 to-transparent opacity-0 transition-opacity",
             "group-hover/textarea:opacity-100"
           )} />
-        </div>
-        
-        {/* Text stats on hover */}
-        <div className="absolute -bottom-8 left-0 right-0 opacity-0 group-hover/textarea:opacity-100 transition-opacity duration-200 pointer-events-none">
-          <div className="flex items-center justify-center gap-3">
-            <div className="px-2 py-1 bg-gray-900/80 backdrop-blur-sm text-xs text-gray-300 rounded-lg border border-gray-700/50">
-              {data.value?.length || 0} chars
-            </div>
-            <div className="px-2 py-1 bg-cyan-900/20 backdrop-blur-sm text-xs text-cyan-300 rounded-lg border border-cyan-700/30">
-              {getWordCount()} words
-            </div>
-            <div className="px-2 py-1 bg-blue-900/20 backdrop-blur-sm text-xs text-blue-300 rounded-lg border border-blue-700/30">
-              ~{getEstimatedTokens()} tokens
-            </div>
-          </div>
         </div>
       </div>
       

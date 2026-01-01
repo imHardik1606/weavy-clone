@@ -471,7 +471,7 @@ export default function Home() {
       
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {sidebarOpen && <Sidebar onSaveClick={handleSidebarSave} />}
+        {sidebarOpen && <Sidebar />}
         
         {/* Canvas Area */}
         <div className="flex-1 overflow-hidden relative">

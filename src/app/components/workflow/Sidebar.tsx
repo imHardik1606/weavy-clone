@@ -1,72 +1,94 @@
-import { useWorkflowStore } from "../../lib/store/useWorkflowStore";
-import {
-  Type,
-  Image as ImageIcon,
-  Brain,
+import { useWorkflowStore } from '../../lib/store/useWorkflowStore';
+import { 
+  Type, 
+  Image as ImageIcon, 
+  Brain, 
+  Search,
+  FolderOpen,
   Save,
   Download,
   Upload,
-} from "lucide-react";
-import { useState } from "react";
+  Sparkles,
+  Plus,
+  Layers,
+  Palette,
+  X
+} from 'lucide-react';
+import { useState, useMemo } from 'react';
 
 const NODE_TYPES = [
-  {
-    id: "text",
-    label: "Text Node",
-    icon: Type,
-    color: "from-cyan-400 to-blue-500",
-    accent: "#22d3ee",
+  { 
+    id: 'text', 
+    label: 'Text Node', 
+    icon: Type, 
+    color: 'from-cyan-400 to-blue-500',
+    accent: '#22d3ee',
+    description: 'Add and process text data'
   },
-  {
-    id: "image",
-    label: "Image Node",
-    icon: ImageIcon,
-    color: "from-fuchsia-400 to-purple-500",
-    accent: "#e879f9",
+  { 
+    id: 'image', 
+    label: 'Image Node', 
+    icon: ImageIcon, 
+    color: 'from-fuchsia-400 to-purple-500',
+    accent: '#e879f9',
+    description: 'Handle image inputs and outputs'
   },
-  {
-    id: "llm",
-    label: "LLM Node",
-    icon: Brain,
-    color: "from-amber-300 to-orange-500",
-    accent: "#fbbf24",
+  { 
+    id: 'llm', 
+    label: 'Run Any LLM', 
+    icon: Brain, 
+    color: 'from-amber-300 to-orange-500',
+    accent: '#fbbf24',
+    description: 'Large Language Model processing'
   },
 ];
 
-interface SidebarProps {
-  onSaveClick?: () => void;
-}
-
-export default function Sidebar({ onSaveClick }: SidebarProps) {
+export default function Sidebar() {
   const addNode = useWorkflowStore((state) => state.addNode);
   const saveWorkflow = useWorkflowStore((state) => state.saveWorkflow);
   const exportWorkflow = useWorkflowStore((state) => state.exportWorkflow);
   const importWorkflow = useWorkflowStore((state) => state.importWorkflow);
-  const [workflowName, setWorkflowName] = useState("My Workflow");
+  const [workflowName, setWorkflowName] = useState('My Workflow');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeButton, setActiveButton] = useState<string | null>(null);
-
+  
+  // Filter nodes based on search query
+  const filteredNodes = useMemo(() => {
+    if (!searchQuery.trim()) return NODE_TYPES;
+    
+    const query = searchQuery.toLowerCase();
+    return NODE_TYPES.filter(node => 
+      node.label.toLowerCase().includes(query) ||
+      node.description.toLowerCase().includes(query) ||
+      node.id.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+  
   const handleAddNode = (type: string) => {
     const position = {
       x: Math.random() * 400 + 100,
       y: Math.random() * 300 + 100,
     };
     addNode(type, position);
-
+    
     // Visual feedback
     setActiveButton(type);
     setTimeout(() => setActiveButton(null), 300);
+    
+    // Clear search after adding a node (optional)
+    // setSearchQuery('');
   };
-
+  
   const handleExport = () => {
     const data = exportWorkflow();
-    const blob = new Blob([data], { type: "application/json" });
+    const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = "workflow.json";
+    a.download = 'workflow.json';
     a.click();
   };
-
+  
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -78,120 +100,198 @@ export default function Sidebar({ onSaveClick }: SidebarProps) {
     }
   };
 
-  const handleSave = () => {
-    saveWorkflow(workflowName);
-    // Notify parent component about save click
-    if (onSaveClick) {
-      onSaveClick();
-    }
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   return (
-    <aside
-      className="
-        w-16
-        h-full
-        flex flex-col
-        bg-[#0b0e14]
-        border-r border-white/5
-      "
-    >
-      {/* TOP: Node list */}
-      <div className="flex-1 overflow-y-auto py-4">
-        <div className="flex flex-col items-center gap-3">
-          {NODE_TYPES.map((node) => {
-            const Icon = node.icon;
-            const isActive = activeButton === node.id;
-
-            return (
-              <button
-                key={node.id}
-                onClick={() => handleAddNode(node.id)}
-                title={node.label}
-                className={`
-                  relative group
-                  w-10 h-10
-                  flex items-center justify-center
-                  rounded-lg
-                  bg-[#111521]
-                  border border-white/5
-                  transition-all duration-200
-                  hover:bg-[#171c2e]
-                  ${isActive ? "scale-95" : "hover:scale-[1.05]"}
-                `}
-              >
-                <Icon className="w-4 h-4 text-[#9aa3c7] group-hover:text-[#e6e9f2]" />
-              </button>
-            );
-          })}
+    <div className="w-68 h-full flex flex-col bg-linear-to-b from-gray-900 via-gray-900/95 to-gray-900/90 backdrop-blur-xl border-r border-gray-800/50 shadow-2xl shadow-black/30">
+      {/* Decorative top accent */}
+      <div className="h-1 bg-linear-to-r from-cyan-500 via-fuchsia-500 to-amber-500" />
+      
+      {/* Header - Fixed position */}
+      <div className="p-5 border-b border-gray-800/40 bg-linear-to-b from-gray-900 to-gray-900/80 shrink-0">
+        <div className="flex items-center space-x-3 mb-2">
+          <h2 className="text-xl font-bold bg-linear-to-r from-cyan-300 via-blue-200 to-gray-100 bg-clip-text text-transparent">
+            FlowGen Canvas
+          </h2>
+        </div>
+        <p className="text-sm text-gray-400/80 font-light tracking-wide">
+          Drag & drop AI workflow builder
+        </p>
+      </div>
+      
+      {/* Search Bar */}
+      <div className="pl-4 border-b border-gray-800/30 shrink-0">
+        <div className="relative group">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-gray-500" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search node"
+            className="w-90vw pl-8 pr-10 py-2.5 bg-gray-900/60 border border-gray-700/50 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-cyan-400/50 focus:ring-2 focus:ring-cyan-500/20 backdrop-blur-sm transition-all duration-200"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+            >
+              <X className="h-4 w-4 text-gray-500 hover:text-gray-300 transition-colors" />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <div className="mt-2 text-xs text-gray-500">
+            Found {filteredNodes.length} node{filteredNodes.length !== 1 ? 's' : ''}
+          </div>
+        )}
+      </div>
+      
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700/50 scrollbar-track-transparent hover:scrollbar-thumb-gray-600/50">
+        {/* Quick Access - Now filtered by search */}
+        <div className="p-4 border-b border-gray-800/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <Palette className="w-4 h-4 mr-2 text-cyan-300" />
+              <h3 className="text-sm font-semibold text-gray-300/90 tracking-wide">
+                {searchQuery ? 'Search Results' : 'Quick Access'}
+              </h3>
+            </div>
+            {!searchQuery && (
+              <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded-full">
+                {NODE_TYPES.length} nodes
+              </span>
+            )}
+          </div>
+          
+          {filteredNodes.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-500 mb-2">
+                <Search className="w-8 h-8 mx-auto opacity-50" />
+              </div>
+              <p className="text-sm text-gray-400">No nodes found for "{searchQuery}"</p>
+              <p className="text-xs text-gray-500 mt-1">Try different keywords</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredNodes.map((node) => (
+                <button
+                  key={node.id}
+                  onClick={() => handleAddNode(node.id)}
+                  className={`w-full flex items-center p-3 bg-gray-900/80 border border-gray-700/50 hover:border-${node.id === 'text' ? 'cyan' : node.id === 'image' ? 'fuchsia' : node.id === 'llm' ? 'amber' : node.id === 'input' ? 'emerald' : node.id === 'output' ? 'rose' : node.id === 'processor' ? 'indigo' : node.id === 'condition' ? 'yellow' : node.id === 'loop' ? 'purple' : node.id === 'api' ? 'blue' : 'gray'}-400/50 rounded-xl transition-all duration-200 group hover:bg-gray-900 ${
+                    activeButton === node.id ? 'scale-95' : 'hover:scale-[1.02]'
+                  }`}
+                >
+                  <div className={`relative w-10 h-10 rounded-lg bg-linear-to-br ${node.color} flex items-center justify-center mr-3`}>
+                    <div className="absolute inset-0 bg-linear-to-br from-white/20 to-transparent rounded-lg" />
+                    <node.icon className="relative w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="text-md font-mono font-semibold text-gray-100">{node.label}</div>
+                  </div>
+                  <Plus className="w-4 h-4 text-gray-400/70 group-hover:text-gray-200 transition-colors" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Only show other sections if not searching */}
+        {!searchQuery && (
+          <>
+            {/* Workflow Management */}
+            <div className="p-4 border-b border-gray-800/30">
+              <div className="flex items-center mb-4">
+                <Layers className="w-4 h-4 mr-2 text-fuchsia-300" />
+                <h3 className=" font-semibold text-gray-300/90 tracking-wide">Workflow</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="relative group">
+                  <input
+                    type="text"
+                    value={workflowName}
+                    onChange={(e) => setWorkflowName(e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-900/60 border border-gray-700/50 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-fuchsia-400/50 focus:ring-2 focus:ring-fuchsia-500/20 backdrop-blur-sm transition-all duration-200"
+                    placeholder="Workflow name"
+                  />
+                  <button
+                    onClick={() => saveWorkflow(workflowName)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 bg-linear-to-br from-fuchsia-500 to-purple-600 hover:from-fuchsia-400 hover:to-purple-500 rounded-lg transition-all duration-200 shadow-lg hover:shadow-fuchsia-500/25"
+                  >
+                    <Save className="w-4 h-4 text-white" />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleExport}
+                    className="flex items-center justify-center px-3 py-2.5 bg-gray-800/60 hover:bg-cyan-900/30 border border-gray-700/50 hover:border-cyan-400/50 rounded-xl transition-all duration-200 group"
+                  >
+                    <Download className="w-4 h-4 mr-2 text-cyan-300" />
+                    <span className="text-md font-medium text-gray-200">Export</span>
+                  </button>
+                  
+                  <label className="flex items-center justify-center px-3 py-2.5 bg-gray-800/60 hover:bg-fuchsia-900/30 border border-gray-700/50 hover:border-fuchsia-400/50 rounded-xl transition-all duration-200 group cursor-pointer">
+                    <Upload className="w-4 h-4 mr-2 text-fuchsia-300" />
+                    <span className="text-md font-medium text-gray-200">Import</span>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImport}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                
+                <button className="w-full flex items-center justify-center px-3 py-2.5 bg-gray-800/60 hover:bg-gray-700/50 border border-gray-700/50 hover:border-gray-600/50 rounded-xl transition-all duration-200">
+                  <FolderOpen className="w-4 h-4 mr-2 text-gray-400" />
+                  <span className="text-md font-medium text-gray-200">Load Workflow</span>
+                </button>
+              </div>
+            </div>
+            
+            {/* Help Section */}
+            <div className="p-4">
+              <div className="p-3 bg-linear-to-br from-gray-900/50 to-gray-800/30 border border-gray-700/30 rounded-xl">
+                <div className="text-xs text-gray-400/70 mb-2">💡 Quick Tips</div>
+                <ul className="text-xs text-gray-500 space-y-1">
+                  <li className="flex items-start">
+                    <div className="w-1 h-1 bg-cyan-400 rounded-full mt-1.5 mr-2"></div>
+                    Click nodes to add them to canvas
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-1 h-1 bg-fuchsia-400 rounded-full mt-1.5 mr-2"></div>
+                    Drag connections between nodes
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-1 h-1 bg-amber-400 rounded-full mt-1.5 mr-2"></div>
+                    Export your workflow as JSON
+                  </li>
+                  <li className="flex items-start">
+                    <div className="w-1 h-1 bg-emerald-400 rounded-full mt-1.5 mr-2"></div>
+                    Use search to find specific nodes
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Footer - Fixed position */}
+      <div className="p-4 border-t border-gray-800/30 bg-gray-900/80 shrink-0">
+        <div className="flex items-center justify-between text-xs text-gray-500/60">
+          <span>Weavy Canvas v1.0</span>
+          <span className="px-2 py-1 bg-linear-to-r from-gray-800/50 to-gray-900/50 rounded-full">
+            βeta
+          </span>
         </div>
       </div>
-
-      {/* Workflow management */}
-      <div
-        className="
-          py-4
-          flex flex-col
-          items-center
-          gap-3
-          border-t border-gray-800/40
-          shrink-0
-        "
-      >
-        <button
-          onClick={handleSave}
-          title="Save"
-          className="
-            w-10 h-10
-            flex items-center justify-center
-            rounded-lg
-            bg-[#111521]
-            border border-white/5
-            transition-all duration-200
-            hover:bg-[#171c2e] hover:scale-[1.05]
-          "
-        >
-          <Save className="w-4 h-4 text-[#9aa3c7] hover:text-[#e6e9f2]" />
-        </button>
-
-        <button 
-          onClick={handleExport} 
-          title="Export" 
-          className="
-            w-10 h-10
-            flex items-center justify-center
-            rounded-lg
-            bg-[#111521]
-            border border-white/5
-            transition-all duration-200
-            hover:bg-[#171c2e] hover:scale-[1.05]
-          "
-        >
-          <Download className="w-4 h-4 text-[#9aa3c7] hover:text-[#e6e9f2]" />
-        </button>
-
-        <label 
-          title="Import" 
-          className="
-            w-10 h-10
-            flex items-center justify-center
-            rounded-lg
-            bg-[#111521]
-            border border-white/5
-            transition-all duration-200
-            hover:bg-[#171c2e] hover:scale-[1.05]
-            cursor-pointer
-          "
-        >
-          <Upload className="w-4 h-4 text-[#9aa3c7] hover:text-[#e6e9f2]" />
-          <input
-            type="file"
-            accept=".json"
-            onChange={handleImport}
-            className="hidden"
-          />
-        </label>
-      </div>
-    </aside>
+    </div>
   );
 }

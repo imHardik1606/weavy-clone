@@ -435,16 +435,6 @@ export default function ImageNode({ id, data, selected }: NodeProps<ExtendedWork
                 )} size={20} />
               </div>
             </div>
-            <p className={cn(
-              "font-medium mb-1",
-              fontSizeClass,
-              dragOver ? "text-red-300" : "text-gray-300"
-            )}>
-              {dragOver ? "Drop image here" : "Drag & drop or click to upload"}
-            </p>
-            <p className={cn("text-gray-500", fontSizeClass)}>
-              Supports JPG, PNG, WebP, GIF, SVG
-            </p>
             
             {/* Format badges */}
             <div className="flex justify-center gap-1 mt-3">
