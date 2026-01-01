@@ -23,7 +23,11 @@ import {
   Sliders,
   Code,
   Check,
-  Edit2
+  Edit2,
+  PanelLeft, // Added for sidebar toggle
+  PanelLeftClose, // Added for sidebar toggle
+  ChevronLeft, // Alternative icon
+  ChevronRight // Alternative icon
 } from 'lucide-react';
 import { useWorkflowStore } from './lib/store/useWorkflowStore';
 import { useKeyboardShortcuts } from './lib/hooks/useKeyboardShortcuts';
@@ -147,9 +151,18 @@ export default function Home() {
     }, 100);
   };
 
-  // Close save popup on Escape key
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
+
+  // Add keyboard shortcut for toggling sidebar (Cmd/Ctrl + B)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
       if (e.key === 'Escape' && showSavePopup) {
         handleSaveCancel();
       }
@@ -160,7 +173,7 @@ export default function Home() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSavePopup, isEditingName]);
+  }, [showSavePopup, isEditingName, sidebarOpen]);
 
   return (
     <div className="h-screen flex flex-col bg-linear-to-br from-gray-950 via-gray-900 to-gray-950 overflow-hidden">
@@ -168,6 +181,21 @@ export default function Home() {
       <header className="relative bg-linear-to-b from-gray-900/95 to-gray-900/90 backdrop-blur-xl border-b border-gray-800/50 px-5 py-3.5 flex items-center justify-between z-30">
         {/* Left side */}
         <div className="flex items-center space-x-4">
+          {/* Sidebar Toggle Button */}
+          <button
+            onClick={toggleSidebar}
+            className="p-2.5 hover:bg-gray-800/50 rounded-xl transition-all duration-300 group"
+            title={`Toggle Sidebar (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+B)`}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-linear-to-br from-blue-500/20 to-cyan-500/20 rounded-lg blur opacity-0 group-hover:opacity-100 transition-opacity" />
+              {sidebarOpen ? (
+                <PanelLeftClose className="relative w-5 h-5 text-gray-300 group-hover:text-blue-300 transition-transform duration-300" />
+              ) : (
+                <PanelLeft className="relative w-5 h-5 text-gray-300 group-hover:text-cyan-300 transition-transform duration-300" />
+              )}
+            </div>
+          </button>
           
           <div className="flex items-center gap-3">
             <div>
@@ -311,6 +339,25 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+                {/* Add sidebar toggle shortcut to the list */}
+                <div 
+                  className="p-4 bg-linear-to-br from-gray-800/40 to-gray-900/40 rounded-xl border border-gray-700/30 hover:border-gray-600/50 transition-all duration-300 hover:scale-[1.02] group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="text-blue-300/70 group-hover:text-blue-300 transition-colors">
+                        <PanelLeft className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-200">Toggle Sidebar</div>
+                        <div className="text-xs text-gray-400 mt-0.5">Show/Hide sidebar</div>
+                      </div>
+                    </div>
+                    <kbd className="px-3 py-1.5 bg-gray-800/60 text-gray-300 text-sm font-mono rounded-lg border border-gray-700/50 group-hover:border-gray-600/50 transition-colors">
+                      {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+B
+                    </kbd>
+                  </div>
+                </div>
               </div>
               
               {/* Note */}
@@ -511,6 +558,17 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            
+            {/* Floating toggle button for mobile/alternative */}
+            {!sidebarOpen && (
+              <button
+                onClick={toggleSidebar}
+                className="p-2.5 bg-linear-to-br from-gray-900/80 to-gray-800/60 backdrop-blur-xl rounded-xl border border-gray-700/50 shadow-lg hover:bg-gray-800/70 transition-all duration-300 group"
+                title="Show Sidebar"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-cyan-300" />
+              </button>
+            )}
           </div>
         </div>
       </div>
